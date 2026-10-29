@@ -1,6 +1,6 @@
 # a2ui-miniprogram
 
-WeChat MiniProgram native renderer for the [A2UI (Agent-to-User Interface)](https://github.com/a2ui-project/a2ui) specification.
+[WeChat Mini Program](https://developers.weixin.qq.com/miniprogram/dev/framework/) native renderer for the [A2UI (Agent-to-User Interface)](https://github.com/a2ui-project/a2ui) specification.
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
@@ -8,7 +8,7 @@ WeChat MiniProgram native renderer for the [A2UI (Agent-to-User Interface)](http
   <a href="https://www.npmjs.com/package/a2ui-miniprogram"><img src="https://img.shields.io/npm/v/a2ui-miniprogram.svg?style=flat-square&color=6a6eac" alt="npm version"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="license"/></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-22%20%7C%2024-brightgreen.svg?style=flat-square" alt="node version"/></a>
-  <a href="https://mp.weixin.qq.com/"><img src="https://img.shields.io/badge/WeChat%20MiniProgram-%E2%89%A5%202.14.0-07c160.svg?style=flat-square" alt="wechat miniprogram"/></a>
+  <a href="https://developers.weixin.qq.com/miniprogram/dev/framework/"><img src="https://img.shields.io/badge/WeChat%20Mini%20Program-%E2%89%A5%202.14.0-07c160.svg?style=flat-square" alt="wechat miniprogram"/></a>
   <a href="https://github.com/a2ui-project/a2ui"><img src="https://img.shields.io/badge/A2UI%20Spec-v1.0%20Compliant-10b981.svg?style=flat-square" alt="spec"/></a>
   <a href="scripts/run-tests.js"><img src="https://img.shields.io/badge/tests-23%2F23%20passed-success.svg?style=flat-square" alt="tests"/></a>
   <a href="miniprogram/index.d.ts"><img src="https://img.shields.io/badge/TypeScript-Ready-3178c6.svg?style=flat-square" alt="typescript"/></a>
