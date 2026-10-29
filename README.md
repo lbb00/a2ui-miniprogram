@@ -2,8 +2,6 @@
 
 [WeChat Mini Program](https://developers.weixin.qq.com/miniprogram/dev/framework/) native renderer for the [A2UI (Agent-to-User Interface)](https://github.com/a2ui-project/a2ui) specification.
 
-English | [简体中文](README.zh-CN.md)
-
 <p align="center">
   <a href="https://www.npmjs.com/package/a2ui-miniprogram"><img src="https://img.shields.io/npm/v/a2ui-miniprogram.svg?style=flat-square&color=6a6eac" alt="npm version"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="license"/></a>
