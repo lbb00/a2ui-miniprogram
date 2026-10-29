@@ -1,0 +1,13 @@
+tests/
+fixtures/
+scripts/
+*.log
+.github/
+.gitignore
+.npmignore
+.changeset/
+.DS_Store
+.claude/
+scratch/
+scratchpad/
+.system_generated/

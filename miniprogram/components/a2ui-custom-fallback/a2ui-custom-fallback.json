@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "a2ui-node-slot": "../a2ui-node-slot/a2ui-node-slot"
+  }
+}

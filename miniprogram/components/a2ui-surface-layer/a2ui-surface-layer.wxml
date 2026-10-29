@@ -1,0 +1,5 @@
+<import src="../a2ui-surface/templates.wxml" />
+
+<view class="a2ui-layer-root">
+  <template is="tmpl_0_node" data="{{ i: node, surfaceId, uiState }}" />
+</view>

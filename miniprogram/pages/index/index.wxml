@@ -1,0 +1,144 @@
+<!-- A2UI 微信小程序流式渲染器 - 极简原生设计 (Let the layout do the explaining) -->
+<view class="app-container">
+  
+  <!-- ==================== 顶部 iOS 原生质感导航面板 ==================== -->
+  <view class="top-nav-panel">
+    <!-- 用例选择胶囊行 -->
+    <view class="case-header-row">
+      <view class="nav-arrow-btn {{selectedCaseIndex <= 0 ? 'disabled' : ''}}" bindtap="prevCase" hover-class="btn-hover" aria-label="上一用例">
+        <view class="arrow-icon icon-prev"></view>
+      </view>
+      
+      <!-- 原生 Picker 选择器：极简单行胶囊 -->
+      <picker class="case-picker" range="{{caseTitles}}" value="{{selectedCaseIndex}}" bindchange="onSelectCase">
+        <view class="case-info-pill" hover-class="pill-hover">
+          <view class="case-badge">{{selectedCaseIndex + 1}}/{{allCases.length}}</view>
+          <text class="case-title-main">{{currentCase.name || currentCase.file}}</text>
+          <view class="picker-caret"></view>
+        </view>
+      </picker>
+
+      <view class="nav-arrow-btn {{selectedCaseIndex >= allCases.length - 1 ? 'disabled' : ''}}" bindtap="nextCase" hover-class="btn-hover" aria-label="下一用例">
+        <view class="arrow-icon icon-next"></view>
+      </view>
+    </view>
+
+    <!-- 流式控制分段按钮条 (2字极简克制) -->
+    <view class="stream-control-row">
+      <view class="ctrl-btn {{isStreaming ? 'active' : ''}}" bindtap="restartStreaming" hover-class="btn-hover">
+        <view class="ctrl-icon-wrap">
+          <view class="ctrl-icon {{isStreaming ? 'icon-pulse' : 'icon-replay'}}"></view>
+        </view>
+        <text class="ctrl-label">流式</text>
+      </view>
+
+      <view class="ctrl-btn {{currentMessageIndex >= currentTotalMessages ? 'disabled' : ''}}" bindtap="stepNextChunk" hover-class="btn-hover">
+        <view class="ctrl-icon-wrap">
+          <view class="ctrl-icon icon-step"></view>
+        </view>
+        <text class="ctrl-label">步进</text>
+      </view>
+
+      <view class="ctrl-btn" bindtap="skipToDirect" hover-class="btn-hover">
+        <view class="ctrl-icon-wrap">
+          <view class="ctrl-icon icon-instant"></view>
+        </view>
+        <text class="ctrl-label">直出</text>
+      </view>
+
+      <view class="ctrl-btn debug-btn {{showDebugDrawer ? 'open' : ''}}" bindtap="toggleDebugDrawer" hover-class="btn-hover">
+        <view class="ctrl-icon-wrap">
+          <view class="ctrl-icon icon-debug"></view>
+        </view>
+        <text class="ctrl-label">调试</text>
+      </view>
+    </view>
+
+    <!-- 顶栏内嵌状态条 (指标纯粹客观，无冗余说明) -->
+    <view class="nav-status-bar">
+      <view class="status-meta-group">
+        <view class="status-pulse-dot {{isStreaming ? 'streaming' : 'ready'}}"></view>
+        <text class="status-meta-text">{{streamSummaryText}}</text>
+      </view>
+      <view class="status-surface-pill" bindtap="toggleDebugDrawer" hover-class="pill-hover">
+        <text class="surface-pill-id">{{currentSurfaceId || 'surface'}}</text>
+        <view class="surface-pill-arrow"></view>
+      </view>
+    </view>
+
+    <!-- 极细微进度线 (3rpx) -->
+    <view class="stream-progress-track">
+      <view class="stream-progress-fill" style="width: {{streamProgressPercent}}%;"></view>
+    </view>
+  </view>
+
+  <!-- ==================== 核心：A2UI 真实卡片展示舞台 (100% 视口无遮挡) ==================== -->
+  <scroll-view class="stage-scroll-view" scroll-y>
+    <view class="stage-canvas">
+      <!-- 渲染 Surface (通过 setEngine 注入引擎，无需传 renderTree 避免全量覆盖，CR-M2) -->
+      <a2ui-surface 
+        id="main-surface"
+        surfaceId="{{currentSurfaceId}}" 
+        bind:a2uiEvent="onA2UIEvent" 
+        bind:inputChange="onInputChange" 
+      />
+    </view>
+  </scroll-view>
+
+  <!-- ==================== 优雅抽屉：iOS 半屏模态面板 ==================== -->
+  <view class="debug-drawer-mask {{showDebugDrawer ? 'show' : ''}}" bindtap="toggleDebugDrawer" catchtouchmove="preventD"></view>
+  <view class="debug-drawer {{showDebugDrawer ? 'show' : ''}}">
+    <view class="drawer-drag-handle"></view>
+
+    <view class="drawer-header">
+      <view class="drawer-title-group">
+        <text class="drawer-title">协议与事件</text>
+        <text class="drawer-badge">{{currentSurfaceId}}</text>
+      </view>
+      <view class="drawer-actions">
+        <text class="drawer-action-btn" catchtap="clearLogs">清空</text>
+        <view class="drawer-close-circle" catchtap="toggleDebugDrawer">
+          <view class="close-icon"></view>
+        </view>
+      </view>
+    </view>
+
+    <!-- iOS 分段切换器 -->
+    <view class="drawer-tabs-row">
+      <view class="drawer-seg-pill {{activeDebugTab === 'stream' ? 'active' : ''}}" catchtap="setDebugTab" data-tab="stream">
+        协议帧 ({{currentMessageIndex}}/{{currentTotalMessages}})
+      </view>
+      <view class="drawer-seg-pill {{activeDebugTab === 'events' ? 'active' : ''}}" catchtap="setDebugTab" data-tab="events">
+        事件 ({{eventLogs.length}})
+      </view>
+    </view>
+
+    <scroll-view scroll-y class="drawer-content">
+      <!-- 流式消息流水 -->
+      <view wx:if="{{activeDebugTab === 'stream'}}" class="stream-log-list">
+        <view class="log-code-view">
+          <text>{{streamLog}}</text>
+        </view>
+      </view>
+
+      <!-- 双向交互事件 -->
+      <view wx:else class="event-log-list">
+        <block wx:if="{{eventLogs.length > 0}}">
+          <view class="event-item" wx:for="{{eventLogs}}" wx:key="index">
+            <view class="event-time-row">
+              <text class="event-tag">ACTION</text>
+              <text class="event-time">{{item.time}}</text>
+            </view>
+            <view class="event-json-box">
+              <text>{{item.content}}</text>
+            </view>
+          </view>
+        </block>
+        <view wx:else class="empty-event-tip">
+          <text class="empty-title">暂无事件</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+</view>

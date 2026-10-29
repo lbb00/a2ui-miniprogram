@@ -1,0 +1,5 @@
+{
+  "usingComponents": {
+    "a2ui-surface": "../../components/a2ui-surface/a2ui-surface"
+  }
+}

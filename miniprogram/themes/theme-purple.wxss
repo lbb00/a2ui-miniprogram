@@ -1,0 +1,51 @@
+/* ==========================================================================
+   A2UI Official Purple Gallery Theme (官方画廊专属演示主题)
+   标志色: Slate Lavender 紫色 (#6a6eac / rgb(106, 110, 172))
+   严格遵循 A2UI 官方 Design Tokens 规范，仅用于官方画廊 36 个官方用例演示
+   ========================================================================== */
+
+page,
+.theme-purple {
+  /* ================= 官方标准 Design Tokens (A2UI Universal Spec) ================= */
+  --a2ui-color-primary: #6a6eac;
+  --a2ui-color-on-primary: #ffffff;
+  --a2ui-color-primary-light: rgba(106, 110, 172, 0.1);
+  --a2ui-color-primary-dark: #525586;
+  --a2ui-color-primary-hover: #525586;
+  --a2ui-color-surface: #ffffff;
+  --a2ui-color-on-surface: #1a1a24;
+  --a2ui-color-border: rgba(106, 110, 172, 0.15);
+  --a2ui-color-input: #f4f4fa;
+  --a2ui-color-on-input: #1a1a24;
+  --a2ui-color-secondary: #e2e3f0;
+  --a2ui-color-on-secondary: #1a1a24;
+
+  /* 尺寸与卡片专用 Token (画廊 18px / 36rpx 大圆角卡片) */
+  --a2ui-card-border-radius: 36rpx;
+  --a2ui-card-padding: 24rpx;
+  --a2ui-card-box-shadow: 0 4rpx 24rpx rgba(106, 110, 172, 0.08);
+  --a2ui-button-border-radius: 8rpx;
+
+  /* ================= 向下兼容别名 (Historic Variable Aliases) ================= */
+  --a2ui-primary-color: var(--a2ui-color-primary);
+  --a2ui-primary-contrast: var(--a2ui-color-on-primary);
+  --a2ui-primary-light: var(--a2ui-color-primary-light);
+  --a2ui-primary-shadow: rgba(106, 110, 172, 0.25);
+  --a2ui-danger-color: #ef4444;
+
+  --a2ui-surface-bg: var(--a2ui-color-surface);
+  --a2ui-surface-subtle: #eeeff7;
+  --a2ui-input-bg: var(--a2ui-color-input);
+  --a2ui-border-color: var(--a2ui-color-border);
+  --a2ui-border-focus: var(--a2ui-color-primary);
+  --a2ui-card-shadow: var(--a2ui-card-box-shadow);
+
+  --a2ui-card-radius: var(--a2ui-card-border-radius);
+  --a2ui-btn-radius: var(--a2ui-button-border-radius);
+  --a2ui-input-radius: 20rpx;
+
+  --a2ui-text-primary: var(--a2ui-color-on-surface);
+  --a2ui-text-secondary: #6e6e82;
+  --a2ui-text-muted: #8e8ea6;
+  --a2ui-text-link: var(--a2ui-color-primary);
+}

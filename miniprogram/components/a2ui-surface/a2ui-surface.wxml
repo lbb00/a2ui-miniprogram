@@ -1,0 +1,34 @@
+<import src="./templates.wxml" />
+
+<!-- ==================== 宏观扩展：顶栏插槽 (Header Slot) ==================== -->
+<slot name="header" />
+
+<!-- ==================== 核心卡片画布 (Surface Canvas) ==================== -->
+<view 
+  class="a2ui-surface {{darkMode ? 'a2ui-dark' : ''}}" 
+  style="{{surfaceThemeStyle}}"
+  wx:if="{{localRenderTree}}" 
+  bind:nodeTap="onDeepNodeTap" 
+  bind:nodeInput="onDeepNodeInput"
+  bind:nodeFocus="handleInputFocus"
+  bind:nodeBlur="handleInputBlur"
+  bind:nodeTabTap="onDeepNodeTabTap"
+  bind:nodeModalOpen="onDeepNodeModalOpen"
+  bind:nodeModalClose="onDeepNodeModalClose"
+  bind:nodeChipSelect="onDeepNodeChipSelect"
+  bind:action="onCustomAction"
+  bind:inputChange="onCustomInput"
+  bind:uiStateChange="onCustomUIStateChange"
+>
+  <template is="tmpl_0_node" data="{{ i: localRenderTree, surfaceId, uiState }}" />
+</view>
+
+<!-- ==================== 空态与过渡态插槽 (Empty Slot) ==================== -->
+<view class="a2ui-surface-empty" wx:else>
+  <slot name="empty">
+    <text class="a2ui-loading-hint" wx:if="{{emptyHint}}">{{emptyHint}}</text>
+  </slot>
+</view>
+
+<!-- ==================== 宏观扩展：底栏插槽 (Footer Slot) ==================== -->
+<slot name="footer" />

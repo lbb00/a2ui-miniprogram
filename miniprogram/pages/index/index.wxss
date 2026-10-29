@@ -1,0 +1,591 @@
+/* ==========================================================================
+   A2UI 微信小程序流式渲染器 - 演示 Demo 页面专用样式
+   引入官方画廊 Slate Lavender 紫色演示主题，配合 iOS 极简外壳呈现 36 个官方用例
+   ========================================================================== */
+
+@import "../../themes/theme-purple.wxss";
+
+page {
+  background-color: #ebebf2; /* 官方 A2UI 画廊钦定雾霾浅灰紫底色 */
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
+  color: #1a1a24;
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background-color: #ebebf2;
+}
+
+/* ================= 顶部 iOS 原生质感导航面板 ================= */
+.top-nav-panel {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.08);
+  padding: 16rpx 24rpx 14rpx 24rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.04);
+  z-index: 100;
+  position: relative;
+}
+
+.case-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  margin-bottom: 14rpx;
+}
+
+.nav-arrow-btn {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 32rpx;
+  background: #f2f2f7;
+  border: 1rpx solid rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.nav-arrow-btn.btn-hover {
+  background: #e5e5ea;
+  transform: scale(0.96);
+}
+
+.nav-arrow-btn.disabled {
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+.arrow-icon {
+  width: 22rpx;
+  height: 22rpx;
+  background-color: #1c1c1e;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+}
+
+.arrow-icon.icon-prev {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 18 9 12 15 6'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='15 18 9 12 15 6'/%3E%3C/svg%3E");
+}
+
+.arrow-icon.icon-next {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E");
+}
+
+.case-picker {
+  flex: 1;
+  min-width: 0;
+}
+
+.case-info-pill {
+  height: 64rpx;
+  background: #f2f2f7;
+  border-radius: 32rpx;
+  padding: 0 16rpx 0 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1rpx solid rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.case-info-pill.pill-hover {
+  background: #e8e8ed;
+}
+
+.case-badge {
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #ffffff;
+  background: #6a6eac; /* 官方 A2UI 标志 Slate Lavender 紫色 */
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+  letter-spacing: 0.4rpx;
+  flex-shrink: 0;
+}
+
+.case-title-main {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1c1c1e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin: 0 14rpx;
+  text-align: center;
+  flex: 1;
+}
+
+.picker-caret {
+  width: 18rpx;
+  height: 18rpx;
+  background-color: #8e8e93;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  flex-shrink: 0;
+}
+
+/* ================= 控制分段按钮条 (2字极简克制) ================= */
+.stream-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.ctrl-btn {
+  flex: 1;
+  height: 60rpx;
+  background: #f2f2f7;
+  border-radius: 16rpx;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1rpx solid rgba(0, 0, 0, 0.04);
+  color: #3a3a3c;
+  transition: all 0.15s ease;
+  padding: 0 4rpx;
+  box-sizing: border-box;
+}
+
+.ctrl-btn.btn-hover {
+  background: #e5e5ea;
+}
+
+.ctrl-btn.active {
+  background: #6a6eac;
+  border-color: #6a6eac;
+  color: #ffffff;
+  box-shadow: 0 4rpx 14rpx rgba(106, 110, 172, 0.28);
+}
+
+.ctrl-btn.open {
+  background: #1c1c1e;
+  border-color: #1c1c1e;
+  color: #ffffff;
+}
+
+.ctrl-btn.disabled {
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.ctrl-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 8rpx;
+}
+
+.ctrl-icon {
+  width: 24rpx;
+  height: 24rpx;
+  background-color: currentColor;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+}
+
+.ctrl-icon.icon-replay {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67'/%3E%3C/svg%3E");
+}
+
+.ctrl-icon.icon-pulse {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpolygon points='13 2 3 14 12 14 11 22 21 10 12 10 13 2'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpolygon points='13 2 3 14 12 14 11 22 21 10 12 10 13 2'/%3E%3C/svg%3E");
+  animation: pulseScale 1s infinite alternate;
+}
+
+@keyframes pulseScale {
+  0% { transform: scale(0.9); }
+  100% { transform: scale(1.15); }
+}
+
+.ctrl-icon.icon-step {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='5 4 15 12 5 20 5 4' fill='black'/%3E%3Cline x1='19' y1='5' x2='19' y2='19'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolygon points='5 4 15 12 5 20 5 4' fill='black'/%3E%3Cline x1='19' y1='5' x2='19' y2='19'/%3E%3C/svg%3E");
+}
+
+.ctrl-icon.icon-instant {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpolygon points='13 2 3 14 12 14 11 22 21 10 12 10 13 2'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='black'%3E%3Cpolygon points='13 2 3 14 12 14 11 22 21 10 12 10 13 2'/%3E%3C/svg%3E");
+}
+
+.ctrl-icon.icon-debug {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='16 18 22 12 16 6'/%3E%3Cpolyline points='8 6 2 12 8 18'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='16 18 22 12 16 6'/%3E%3Cpolyline points='8 6 2 12 8 18'/%3E%3C/svg%3E");
+}
+
+.ctrl-label {
+  font-size: 24rpx;
+  font-weight: 500;
+  letter-spacing: 0.2rpx;
+  line-height: 1;
+}
+
+/* ================= 顶栏内嵌状态条 (指标纯粹客观，无冗余说明) ================= */
+.nav-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 6rpx;
+}
+
+.status-meta-group {
+  display: flex;
+  align-items: center;
+}
+
+.status-pulse-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 6rpx;
+  margin-right: 10rpx;
+  flex-shrink: 0;
+}
+
+.status-pulse-dot.ready {
+  background: #34c759;
+  box-shadow: 0 0 8rpx rgba(52, 199, 89, 0.4);
+}
+
+.status-pulse-dot.streaming {
+  background: #ff9500;
+  box-shadow: 0 0 8rpx rgba(255, 149, 0, 0.4);
+  animation: pulseDot 1s infinite alternate;
+}
+
+@keyframes pulseDot {
+  0% { opacity: 0.4; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1.15); }
+}
+
+.status-meta-text {
+  font-size: 22rpx;
+  color: #636366;
+  font-weight: 500;
+  letter-spacing: 0.2rpx;
+  font-feature-settings: 'tnum';
+  font-variant-numeric: tabular-nums;
+}
+
+.status-surface-pill {
+  display: flex;
+  align-items: center;
+  background: #f2f2f7;
+  padding: 4rpx 14rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid rgba(0, 0, 0, 0.04);
+  transition: all 0.15s ease;
+}
+
+.status-surface-pill.pill-hover {
+  background: #e5e5ea;
+}
+
+.surface-pill-id {
+  font-size: 20rpx;
+  font-family: -apple-system-monospaced, Menlo, monospace;
+  color: #6a6eac;
+  font-weight: 600;
+}
+
+.surface-pill-arrow {
+  width: 12rpx;
+  height: 12rpx;
+  background-color: #8e8e93;
+  margin-left: 6rpx;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='9 18 15 12 9 6'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+}
+
+/* 进度细线 */
+.stream-progress-track {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3rpx;
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.stream-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6a6eac, #8287d6);
+  transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ================= 核心舞台 (100% 视口无遮挡) ================= */
+.stage-scroll-view {
+  flex: 1;
+  width: 100%;
+  height: 0;
+  box-sizing: border-box;
+}
+
+.stage-canvas {
+  padding: 28rpx 28rpx 60rpx 28rpx;
+  box-sizing: border-box;
+  min-height: 100%;
+}
+
+/* ================= 优雅抽屉：iOS 半屏模态面板 ================= */
+.debug-drawer-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.debug-drawer-mask.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.debug-drawer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 68vh;
+  background: #ffffff;
+  border-radius: 36rpx 36rpx 0 0;
+  z-index: 210;
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -12rpx 48rpx rgba(0, 0, 0, 0.12);
+  box-sizing: border-box;
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.debug-drawer.show {
+  transform: translateY(0);
+}
+
+.drawer-drag-handle {
+  width: 72rpx;
+  height: 8rpx;
+  background: #d1d1d6;
+  border-radius: 4rpx;
+  margin: 16rpx auto 8rpx auto;
+  flex-shrink: 0;
+}
+
+.drawer-header {
+  padding: 16rpx 28rpx 18rpx 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+
+.drawer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  min-width: 0;
+}
+
+.drawer-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1c1c1e;
+  letter-spacing: 0.3rpx;
+  white-space: nowrap;
+}
+
+.drawer-badge {
+  font-size: 20rpx;
+  background: #f2f2f7;
+  color: #6a6eac;
+  padding: 4rpx 12rpx;
+  border-radius: 8rpx;
+  font-weight: 600;
+  font-family: -apple-system-monospaced, Menlo, monospace;
+  white-space: nowrap;
+  max-width: 180rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.drawer-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex-shrink: 0;
+}
+
+.drawer-action-btn {
+  font-size: 24rpx;
+  color: #6a6eac;
+  font-weight: 600;
+  padding: 6rpx 8rpx;
+}
+
+.drawer-close-circle {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 24rpx;
+  background: #f2f2f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.drawer-close-circle:active {
+  background: #e5e5ea;
+}
+
+.close-icon {
+  width: 18rpx;
+  height: 18rpx;
+  background-color: #8e8e93;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='18' y1='6' x2='6' y2='18'/%3E%3Cline x1='6' y1='6' x2='18' y2='18'/%3E%3C/svg%3E");
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+}
+
+/* 分段切换 */
+.drawer-tabs-row {
+  display: flex;
+  background: #f2f2f7;
+  border-radius: 18rpx;
+  padding: 6rpx;
+  margin: 16rpx 28rpx 16rpx 28rpx;
+}
+
+.drawer-seg-pill {
+  flex: 1;
+  text-align: center;
+  padding: 12rpx 0;
+  font-size: 24rpx;
+  color: #636366;
+  font-weight: 500;
+  border-radius: 14rpx;
+  transition: all 0.2s ease;
+}
+
+.drawer-seg-pill.active {
+  background: #ffffff;
+  color: #1c1c1e;
+  font-weight: 600;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.08);
+}
+
+.drawer-content {
+  flex: 1;
+  height: 0;
+  padding: 0 28rpx 28rpx 28rpx;
+  box-sizing: border-box;
+}
+
+.log-code-view {
+  background: #1e1e24;
+  border-radius: 20rpx;
+  padding: 24rpx;
+  color: #a5b4fc;
+  font-family: -apple-system-monospaced, Menlo, Monaco, Consolas, monospace;
+  font-size: 21rpx;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-all;
+  box-shadow: inset 0 2rpx 8rpx rgba(0, 0, 0, 0.2);
+  border: 1rpx solid rgba(255, 255, 255, 0.06);
+}
+
+.event-item {
+  background: #f8f8fa;
+  border-radius: 20rpx;
+  padding: 20rpx;
+  margin-bottom: 16rpx;
+  border: 1rpx solid rgba(0, 0, 0, 0.05);
+}
+
+.event-time-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.event-tag {
+  background: #6a6eac;
+  color: #ffffff;
+  font-size: 20rpx;
+  font-weight: 700;
+  padding: 2rpx 12rpx;
+  border-radius: 8rpx;
+  margin-right: 12rpx;
+  letter-spacing: 0.4rpx;
+}
+
+.event-time {
+  font-size: 22rpx;
+  color: #8e8e93;
+}
+
+.event-json-box {
+  font-family: -apple-system-monospaced, Menlo, Monaco, Consolas, monospace;
+  font-size: 22rpx;
+  color: #1c1c1e;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.empty-event-tip {
+  text-align: center;
+  padding: 80rpx 40rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.empty-title {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #8e8e93;
+}

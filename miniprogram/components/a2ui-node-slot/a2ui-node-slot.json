@@ -1,0 +1,11 @@
+{
+  "component": true,
+  "usingComponents": {
+    "a2ui-custom-fallback": "../a2ui-custom-fallback/a2ui-custom-fallback"
+  },
+  "componentGenerics": {
+    "a2ui-custom-node": {
+      "default": "../a2ui-custom-fallback/a2ui-custom-fallback"
+    }
+  }
+}

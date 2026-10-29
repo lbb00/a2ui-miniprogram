@@ -1,0 +1,17 @@
+<view class="a2ui-fallback-box">
+  <view wx:if="{{isDev}}" class="a2ui-fallback-diag">
+    <text class="a2ui-diag-tag">⚠️ A2UI 扩展组件未挂载</text>
+    <text class="a2ui-diag-text">&lt;{{node.component || 'CustomNode'}} /&gt;</text>
+  </view>
+
+  <view class="a2ui-fallback-children" wx:if="{{node.children && node.children.length > 0}}">
+    <block wx:for="{{node.children}}" wx:key="id">
+      <a2ui-node-slot 
+        node="{{item}}" 
+        surfaceId="{{surfaceId}}" 
+        uiState="{{uiState}}" 
+        scope="{{scope}}" 
+      />
+    </block>
+  </view>
+</view>

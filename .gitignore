@@ -1,0 +1,15 @@
+node_modules/
+miniprogram_npm/
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+coverage/
+.idea/
+.vscode/
+scratch/
+scratchpad/
+.claude/
+artifacts/
+.system_generated/

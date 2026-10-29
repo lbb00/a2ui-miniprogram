@@ -1,0 +1,817 @@
+/* ==========================================================================
+   A2UI Standard Design System (Core Structural & Semantic Styles)
+   遵循 A2UI 标准规范，采用纯净标准 CSS 与 Design Tokens (CSS Variables)
+   主题色与专属配色解耦，通过 CSS 变量灵活定制，默认提供通用中性现代基调
+   ========================================================================== */
+
+/* 核心画布与根容器 (声明标准 CSS Design Tokens 与双向别名) */
+:host {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.a2ui-surface {
+  width: 100%;
+  box-sizing: border-box;
+  animation: a2uiFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ========================================================================
+     1. A2UI 官方标准色彩系统 (Universal Basic Catalog Spec)
+     对标 @a2ui/web_core/src/universal/basic_catalog/styles/default.ts
+     核心默认主色采用官方基准深蓝 #1777ee (#17e)，支持宿主主题或 Agent 意图覆盖
+     ======================================================================== */
+  --a2ui-color-background: #eeeeee;
+  --a2ui-color-on-background: #333333;
+  --a2ui-color-surface: #ffffff;
+  --a2ui-color-on-surface: #333333;
+
+  --a2ui-color-primary: #1777ee;
+  --a2ui-color-primary-light: rgba(23, 119, 238, 0.08);
+  --a2ui-color-primary-dark: #0f5bb8;
+  --a2ui-color-primary-hover: #0f5bb8;
+  --a2ui-color-on-primary: #ffffff;
+
+  --a2ui-color-secondary: #dddddd;
+  --a2ui-color-secondary-light: #f3f4f6;
+  --a2ui-color-secondary-dark: #4b5563;
+  --a2ui-color-secondary-hover: #4b5563;
+  --a2ui-color-on-secondary: #333333;
+
+  --a2ui-color-border: rgba(0, 0, 0, 0.08);
+  --a2ui-border-width: 1px;
+  --a2ui-border-radius: 8rpx; /* 官方 0.25rem = 4px = 8rpx */
+  --a2ui-border: 1px solid var(--a2ui-color-border, #cccccc);
+
+  --a2ui-color-input: #f8fafc;
+  --a2ui-color-on-input: #333333;
+  --a2ui-color-danger: #ef4444;
+
+  /* ========================================================================
+     2. 官方间距网格阶梯 (8px Grid: 0.5rem = 16rpx)
+     ======================================================================== */
+  --a2ui-grid-base: 16rpx;
+  --a2ui-spacing-xs: 4rpx;
+  --a2ui-spacing-s: 8rpx;
+  --a2ui-spacing-m: var(--a2ui-grid-base, 16rpx);
+  --a2ui-spacing-l: 32rpx;
+  --a2ui-spacing-xl: 64rpx;
+
+  /* ========================================================================
+     3. 官方文字阶梯 (Scale: 1.2)
+     ======================================================================== */
+  --a2ui-font-size: 28rpx;
+  --a2ui-font-scale: 1.2;
+  --a2ui-font-size-xs: 20rpx;
+  --a2ui-font-size-s: 24rpx;
+  --a2ui-font-size-m: var(--a2ui-font-size, 28rpx);
+  --a2ui-font-size-l: 34rpx;
+  --a2ui-font-size-xl: 40rpx;
+  --a2ui-font-size-2xl: 48rpx;
+  --a2ui-line-height-headings: 1.2;
+  --a2ui-line-height-body: 1.5;
+
+  /* ========================================================================
+     4. 官方组件级专用 Token (Component-Scoped Overrides)
+     ======================================================================== */
+  --a2ui-card-padding: var(--a2ui-spacing-m, 16rpx);
+  --a2ui-card-border-radius: 24rpx;
+  --a2ui-card-box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+  --a2ui-card-background: var(--a2ui-color-surface, #ffffff);
+  --a2ui-card-border: var(--a2ui-border-width, 1px) solid var(--a2ui-color-border, rgba(0, 0, 0, 0.08));
+
+  --a2ui-button-padding: var(--a2ui-spacing-s, 8rpx) var(--a2ui-spacing-l, 32rpx);
+  --a2ui-button-border-radius: var(--a2ui-border-radius, 8rpx);
+  --a2ui-button-background: var(--a2ui-color-surface, #ffffff);
+  --a2ui-button-border: var(--a2ui-border-width, 1px) solid var(--a2ui-color-border, rgba(0, 0, 0, 0.08));
+
+  --a2ui-row-gap: var(--a2ui-spacing-m, 16rpx);
+  --a2ui-column-gap: var(--a2ui-spacing-m, 16rpx);
+
+  /* ========================================================================
+     5. 双向别名向下兼容 (Historic / Tailwind-Style Variable Mapping)
+     ======================================================================== */
+  --a2ui-primary-color: var(--a2ui-color-primary, #0284c7);
+  --a2ui-primary-contrast: var(--a2ui-color-on-primary, #ffffff);
+  --a2ui-primary-light: var(--a2ui-color-primary-light, rgba(2, 132, 199, 0.08));
+  --a2ui-primary-shadow: rgba(2, 132, 199, 0.2);
+  --a2ui-danger-color: var(--a2ui-color-danger, #ef4444);
+
+  --a2ui-surface-bg: var(--a2ui-color-surface, #ffffff);
+  --a2ui-surface-subtle: #f8fafc;
+  --a2ui-input-bg: var(--a2ui-color-input, #f8fafc);
+
+  --a2ui-border-color: var(--a2ui-color-border, rgba(0, 0, 0, 0.08));
+  --a2ui-border-focus: var(--a2ui-color-primary, #0284c7);
+  --a2ui-card-shadow: var(--a2ui-card-box-shadow, 0 4rpx 20rpx rgba(0, 0, 0, 0.05));
+
+  --a2ui-card-radius: var(--a2ui-card-border-radius, 24rpx);
+  --a2ui-btn-radius: var(--a2ui-button-border-radius, 8rpx);
+  --a2ui-input-radius: 16rpx;
+
+  --a2ui-text-primary: var(--a2ui-color-on-surface, #1f2937);
+  --a2ui-text-secondary: #4b5563;
+  --a2ui-text-muted: #9ca3af;
+  --a2ui-text-link: var(--a2ui-color-primary, #0284c7);
+}
+
+/* ==========================================================================
+   A2UI 官方标准暗黑模式 (Dark Mode / High Contrast Spec)
+   支持通过 .a2ui-dark 选择器或系统 prefers-color-scheme 原生感知切换
+   ========================================================================== */
+:host(.a2ui-dark),
+.a2ui-surface.a2ui-dark,
+page.a2ui-dark {
+  --a2ui-color-background: #111111;
+  --a2ui-color-on-background: #eeeeee;
+  --a2ui-color-surface: #1e1e1e;
+  --a2ui-color-on-surface: #eeeeee;
+  --a2ui-color-border: #444444;
+  --a2ui-color-input: #2a2a2a;
+  --a2ui-color-on-input: #eeeeee;
+
+  --a2ui-surface-bg: #1e1e1e;
+  --a2ui-surface-subtle: #262626;
+  --a2ui-input-bg: #2a2a2a;
+  --a2ui-border-color: #444444;
+  --a2ui-text-primary: #eeeeee;
+  --a2ui-text-secondary: #a3a3a3;
+  --a2ui-text-muted: #737373;
+}
+
+@media (prefers-color-scheme: dark) {
+  :host,
+  .a2ui-surface {
+    --a2ui-color-background: #111111;
+    --a2ui-color-on-background: #eeeeee;
+    --a2ui-color-surface: #1e1e1e;
+    --a2ui-color-on-surface: #eeeeee;
+    --a2ui-color-border: #444444;
+    --a2ui-color-input: #2a2a2a;
+    --a2ui-color-on-input: #eeeeee;
+
+    --a2ui-surface-bg: #1e1e1e;
+    --a2ui-surface-subtle: #262626;
+    --a2ui-input-bg: #2a2a2a;
+    --a2ui-border-color: #444444;
+    --a2ui-text-primary: #eeeeee;
+    --a2ui-text-secondary: #a3a3a3;
+    --a2ui-text-muted: #737373;
+  }
+}
+
+@keyframes a2uiFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8rpx);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.a2ui-surface-empty {
+  padding: 80rpx 40rpx;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.a2ui-loading-hint {
+  font-size: 26rpx;
+  color: var(--a2ui-text-muted, #9ca3af);
+  margin-top: 16rpx;
+  letter-spacing: 0.5rpx;
+}
+
+/* ================= 弹性布局系统 (严格对标官方 Flutter layout.dart: flexGap = 8 / 16rpx) ================= */
+.a2ui-column {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 16rpx;
+  align-items: stretch; /* 官方规范：缺省 crossAxis 为 stretch */
+}
+
+.a2ui-row {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  box-sizing: border-box;
+  gap: 16rpx;
+  align-items: center;
+}
+
+/* 当父 Column 居中对齐时，Row 子项不应强行 100% 撑满，而应收缩自适应内容并水平居中 (对齐 25_contact-card 操作按钮行) */
+.a2ui-column.a2ui-align-center > .a2ui-row {
+  width: auto;
+  align-self: center;
+}
+.a2ui-column.a2ui-align-center > .a2ui-row.a2ui-justify-spaceBetween,
+.a2ui-column.a2ui-align-center > .a2ui-row.a2ui-justify-spaceAround,
+.a2ui-column.a2ui-align-center > .a2ui-row.a2ui-justify-spaceEvenly {
+  width: 100%;
+}
+
+/* Row 内部表单控件与列容器均分可用宽度，杜绝挤压变形与重叠 */
+.a2ui-row > .a2ui-form-item,
+.a2ui-row > .a2ui-textfield-wrap,
+.a2ui-row > .a2ui-picker-wrap {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Row 弹性子项包裹器 (对齐 Flutter layout.dart) */
+.a2ui-row-item {
+  box-sizing: border-box;
+}
+
+.a2ui-row-item.a2ui-item-flex {
+  min-width: 0;
+}
+
+.a2ui-row-item.a2ui-item-own {
+  flex-shrink: 0;
+}
+
+.a2ui-row-item.a2ui-item-flex > .a2ui-btn {
+  width: 100%;
+}
+
+.a2ui-row-item > .a2ui-form-item,
+.a2ui-row-item > .a2ui-textfield-wrap,
+.a2ui-row-item > .a2ui-picker-wrap {
+  width: 100%;
+  margin-bottom: 0;
+}
+
+.a2ui-row-item .a2ui-text {
+  margin-bottom: 0;
+}
+
+/* Row 内部列表项缩略图尺寸规约 (严格对齐官方 18_track-list / 11_purchase-complete / 26_podcast-episode) */
+.a2ui-row-item .a2ui-image {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 12rpx;
+  flex-shrink: 0;
+}
+
+.a2ui-row-item .a2ui-image.a2ui-image-icon {
+  width: 48rpx !important;
+  height: 48rpx !important;
+  border-radius: 8rpx;
+}
+
+.a2ui-row-item .a2ui-image.a2ui-image-avatar {
+  width: 88rpx !important;
+  height: 88rpx !important;
+  border-radius: 50% !important;
+}
+
+.a2ui-row-item .a2ui-image.a2ui-image-header {
+  width: 100% !important;
+  height: 280rpx !important;
+  border-radius: 24rpx;
+}
+
+/* 列表首项标号排版对齐 (对齐 18_track-list 标号列与图片比例) */
+.a2ui-row-item:first-child .a2ui-text-caption {
+  min-width: 36rpx;
+  text-align: center;
+  display: block;
+}
+
+/* 对齐辅助 */
+.a2ui-align-start { align-items: flex-start; }
+.a2ui-align-center { align-items: center; }
+.a2ui-align-end { align-items: flex-end; }
+.a2ui-align-stretch { align-items: stretch; }
+
+.a2ui-justify-start { justify-content: flex-start; }
+.a2ui-justify-center { justify-content: center; }
+.a2ui-justify-end { justify-content: flex-end; }
+.a2ui-justify-spaceBetween { justify-content: space-between; }
+.a2ui-justify-spaceAround { justify-content: space-around; }
+.a2ui-justify-spaceEvenly { justify-content: space-evenly; }
+
+/* ================= Card 卡片容器 ================= */
+.a2ui-card {
+  background: var(--a2ui-surface-bg, #ffffff);
+  border-radius: var(--a2ui-card-radius, 24rpx);
+  padding: 36rpx;
+  margin-bottom: 24rpx;
+  box-shadow: var(--a2ui-card-shadow, 0 4rpx 20rpx rgba(0, 0, 0, 0.05));
+  border: 1rpx solid var(--a2ui-border-color, rgba(0, 0, 0, 0.08));
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: transform 0.15s ease;
+}
+
+/* ================= Text 文本排版系统 ================= */
+.a2ui-text {
+  color: var(--a2ui-text-primary, #1f2937);
+  font-size: 28rpx;
+  line-height: 1.5;
+  display: block;
+  word-break: break-word;
+}
+
+.a2ui-text-default {
+  font-size: 28rpx;
+  color: var(--a2ui-text-primary, #1f2937);
+  line-height: 1.5;
+  margin-bottom: 6rpx;
+}
+
+.a2ui-text-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--a2ui-text-primary, #1f2937);
+  letter-spacing: -0.5rpx;
+  margin-bottom: 8rpx;
+  line-height: 1.35;
+}
+
+.a2ui-text-subtitle {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--a2ui-text-secondary, #4b5563);
+  margin-bottom: 8rpx;
+  line-height: 1.4;
+}
+
+.a2ui-text-body {
+  font-size: 28rpx;
+  color: var(--a2ui-text-primary, #1f2937);
+  line-height: 1.5;
+  margin-bottom: 6rpx;
+}
+
+.a2ui-text-caption,
+.a2ui-text-caption text {
+  font-size: 24rpx;
+  color: var(--a2ui-text-muted, #9ca3af);
+  line-height: 1.4;
+  font-style: italic;
+}
+
+.a2ui-text-label {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--a2ui-text-muted, #9ca3af);
+  letter-spacing: 0.5rpx;
+  margin-bottom: 6rpx;
+  text-transform: uppercase;
+}
+
+/* ================= Button 按钮系统 (严格对齐官方规范 --a2ui-border-radius: 0.25rem = 4px = 8rpx) ================= */
+.a2ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--a2ui-btn-radius, 8rpx); /* 对齐官方 --a2ui-border-radius: 0.25rem = 4px = 8rpx */
+  padding: 16rpx 36rpx;
+  font-size: 28rpx;
+  font-weight: 600;
+  margin: 12rpx 0;
+  line-height: 1.3;
+  box-sizing: border-box;
+  transition: all 0.15s ease;
+}
+
+.a2ui-btn .a2ui-text {
+  color: inherit;
+  font-size: inherit;
+  display: inline;
+}
+
+.a2ui-btn::after {
+  border: none;
+}
+
+/* 官方规范默认变体: OutlinedButton (轻描边，透明底，不喧宾夺主) */
+.a2ui-btn-default,
+.a2ui-btn-outlined {
+  background-color: transparent;
+  color: var(--a2ui-primary-color, #0284c7);
+  border: 2rpx solid var(--a2ui-primary-color, #0284c7);
+  box-shadow: none;
+}
+
+/* 官方 primary 变体: FilledButton (实心强调色胶囊) */
+.a2ui-btn-primary {
+  background-color: var(--a2ui-primary-color, #0284c7);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 4rpx 14rpx var(--a2ui-primary-shadow, rgba(2, 132, 199, 0.2));
+}
+
+/* 官方 borderless 变体: TextButton (纯文字按钮，用于次要操作、登出/注册等) */
+.a2ui-btn-borderless {
+  background-color: transparent;
+  color: var(--a2ui-primary-color, #0284c7);
+  border: none;
+  box-shadow: none;
+  padding: 10rpx 16rpx;
+  margin: 0;
+}
+
+.a2ui-btn-secondary {
+  background-color: var(--a2ui-surface-subtle, #f8fafc);
+  color: var(--a2ui-primary-color, #0284c7);
+  border: 1rpx solid var(--a2ui-border-color, rgba(0, 0, 0, 0.08));
+  box-shadow: none;
+}
+
+.a2ui-btn-danger {
+  background-color: var(--a2ui-danger-color, #ef4444);
+  color: #ffffff;
+}
+
+.a2ui-btn-hover {
+  opacity: 0.85;
+  transform: scale(0.985);
+}
+
+/* ================= Image 图像系统 (严格对标官方 image.dart 变体) ================= */
+.a2ui-image {
+  width: 100%;
+  border-radius: 20rpx;
+  box-sizing: border-box;
+  display: block;
+  background-color: var(--a2ui-surface-subtle, #f8fafc);
+  overflow: hidden;
+}
+
+/* 变体: icon (24x24 px -> 48x48 rpx) */
+.a2ui-image-icon {
+  width: 48rpx !important;
+  height: 48rpx !important;
+  border-radius: 8rpx;
+  flex-shrink: 0;
+}
+
+/* 变体: avatar (圆形头像) */
+.a2ui-image-avatar {
+  width: 88rpx !important;
+  height: 88rpx !important;
+  border-radius: 50% !important;
+  flex-shrink: 0;
+}
+
+/* 变体: header (全宽顶栏封面) */
+.a2ui-image-header {
+  width: 100% !important;
+  height: 280rpx !important;
+  border-radius: 24rpx;
+}
+
+/* ================= 表单输入组件 TextField ================= */
+.a2ui-form-item {
+  width: 100%;
+  margin-bottom: 24rpx;
+  box-sizing: border-box;
+}
+
+.a2ui-label {
+  font-size: 26rpx;
+  font-weight: 500;
+  color: var(--a2ui-text-secondary, #4b5563);
+  margin-bottom: 12rpx;
+  display: block;
+}
+
+.a2ui-input {
+  width: 100%;
+  height: 84rpx;
+  background: var(--a2ui-input-bg, #f8fafc);
+  border-radius: var(--a2ui-input-radius, 16rpx);
+  padding: 0 28rpx;
+  font-size: 28rpx;
+  color: var(--a2ui-text-primary, #1f2937);
+  box-sizing: border-box;
+  border: 1rpx solid var(--a2ui-border-color, rgba(0, 0, 0, 0.08));
+  transition: border-color 0.2s ease;
+}
+
+.a2ui-input:focus {
+  background: #ffffff;
+  border-color: var(--a2ui-border-focus, #0284c7);
+}
+
+.a2ui-input-error {
+  border-color: var(--a2ui-danger-color, #ef4444) !important;
+  background: #fef2f2 !important;
+}
+
+.a2ui-input-disabled {
+  background: #f1f2f6 !important;
+  color: #9ca3af !important;
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.a2ui-field-error {
+  display: block;
+  font-size: 22rpx;
+  color: var(--a2ui-danger-color, #ef4444);
+  margin-top: 8rpx;
+  line-height: 1.4;
+}
+
+.a2ui-datetime-row {
+  display: flex;
+  flex-direction: row;
+  gap: 16rpx;
+  width: 100%;
+}
+
+.a2ui-datetime-row picker {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ================= 视觉辅助与修饰 ================= */
+.a2ui-divider {
+  width: 100%;
+  height: 1rpx;
+  background-color: var(--a2ui-border-color, #e4e4ee);
+  margin: 20rpx 0;
+}
+
+.a2ui-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  margin-right: 12rpx;
+}
+
+/* CheckBox */
+.a2ui-checkbox {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 0;
+}
+
+.a2ui-checkbox-label {
+  margin-left: 16rpx;
+  font-size: 28rpx;
+  color: var(--a2ui-text-primary, #1f2937);
+}
+
+/* ChoicePicker */
+.a2ui-picker-view,
+.a2ui-picker-box {
+  background: var(--a2ui-input-bg, #f8fafc);
+  border-radius: var(--a2ui-input-radius, 16rpx);
+  padding: 20rpx 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+  border: 1rpx solid var(--a2ui-border-color, rgba(0, 0, 0, 0.08));
+}
+
+.a2ui-picker-text {
+  font-size: 28rpx;
+  color: var(--a2ui-text-primary, #1f2937);
+}
+
+.a2ui-picker-arrow {
+  font-size: 22rpx;
+  color: var(--a2ui-text-muted, #9ca3af);
+}
+
+/* Tabs */
+.a2ui-tabs-header,
+.a2ui-tab-bar {
+  display: flex;
+  border-bottom: 1rpx solid var(--a2ui-border-color, #e4e4ee);
+  margin-bottom: 20rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.a2ui-tab-item {
+  padding: 16rpx 28rpx;
+  font-size: 28rpx;
+  color: var(--a2ui-text-muted, #9ca3af);
+  position: relative;
+  transition: color 0.2s;
+}
+
+.a2ui-tab-item.active {
+  color: var(--a2ui-primary-color, #0284c7);
+  font-weight: 600;
+}
+
+.a2ui-tab-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 28rpx;
+  right: 28rpx;
+  height: 4rpx;
+  background: var(--a2ui-primary-color, #0284c7);
+  border-radius: 2rpx;
+}
+
+/* ================= Markdown 富文本系统 (支持微信 rich-text) ================= */
+.a2ui-code {
+  font-family: -apple-system-font, "SF Mono", Monaco, Menlo, Consolas, "Courier New", monospace;
+  background-color: var(--a2ui-primary-light, rgba(2, 132, 199, 0.08));
+  color: var(--a2ui-primary-color, #0284c7);
+  padding: 2rpx 8rpx;
+  border-radius: 6rpx;
+  font-size: 0.9em;
+  margin: 0 4rpx;
+}
+
+.a2ui-pre {
+  display: block;
+  background-color: #1e1e2e;
+  color: #cdd6f4;
+  padding: 16rpx 20rpx;
+  border-radius: 12rpx;
+  margin: 12rpx 0;
+  overflow-x: auto;
+  box-sizing: border-box;
+}
+
+.a2ui-code-block {
+  font-family: -apple-system-font, "SF Mono", Monaco, Menlo, Consolas, "Courier New", monospace;
+  font-size: 24rpx;
+  line-height: 1.5;
+  white-space: pre;
+  word-break: normal;
+  word-wrap: normal;
+}
+
+.a2ui-link {
+  color: var(--a2ui-text-link, #0284c7);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ================= List 列表系统 (支持垂直列表与横向滚动 List) ================= */
+.a2ui-list-wrap {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.a2ui-list-horizontal {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  white-space: nowrap;
+  box-sizing: border-box;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.a2ui-list-horizontal::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+  color: transparent;
+}
+
+/* ================= ChoicePicker 多选与 Chips 样式系统 (L2) ================= */
+.a2ui-choice-multi-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  width: 100%;
+}
+
+.a2ui-choice-multi-item {
+  display: flex;
+  align-items: center;
+  padding: 16rpx 20rpx;
+  background: var(--a2ui-input-bg, #f8fafc);
+  border-radius: 16rpx;
+  border: 1rpx solid var(--a2ui-border-color, rgba(0, 0, 0, 0.08));
+  font-size: 28rpx;
+  color: var(--a2ui-text-primary, #1f2937);
+  box-sizing: border-box;
+}
+
+.a2ui-choice-multi-item.checked {
+  background: var(--a2ui-primary-light, rgba(2, 132, 199, 0.08));
+  border-color: var(--a2ui-primary-color, #0284c7);
+  color: var(--a2ui-primary-color, #0284c7);
+  font-weight: 500;
+}
+
+.a2ui-choice-multi-label {
+  margin-left: 14rpx;
+}
+
+.a2ui-choice-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14rpx;
+  width: 100%;
+}
+
+.a2ui-choice-chip {
+  padding: 12rpx 24rpx;
+  background: var(--a2ui-input-bg, #f8fafc);
+  border-radius: 30rpx;
+  border: 1rpx solid var(--a2ui-border-color, rgba(0, 0, 0, 0.08));
+  font-size: 26rpx;
+  color: var(--a2ui-text-secondary, #4b5563);
+  transition: all 0.2s ease;
+}
+
+.a2ui-choice-chip.selected {
+  background: var(--a2ui-primary-color, #0284c7);
+  color: var(--a2ui-primary-contrast, #ffffff);
+  border-color: var(--a2ui-primary-color, #0284c7);
+  font-weight: 500;
+}
+
+.a2ui-choice-chip.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.a2ui-list-horizontal > view,
+.a2ui-list-horizontal > .a2ui-card,
+.a2ui-list-horizontal > .a2ui-column,
+.a2ui-list-horizontal > .a2ui-row {
+  flex-shrink: 0;
+}
+
+/* ================= Modal 模态弹窗系统 (H2) ================= */
+.a2ui-modal-container {
+  display: inline-block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.a2ui-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 32rpx;
+  box-sizing: border-box;
+  animation: a2ui-fade-in 0.2s ease-out;
+}
+
+.a2ui-modal-box {
+  width: 90%;
+  max-width: 600rpx;
+  background-color: var(--a2ui-surface-bg, #ffffff);
+  border-radius: 28rpx;
+  padding: 36rpx 32rpx;
+  box-sizing: border-box;
+  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.18);
+  animation: a2ui-scale-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes a2ui-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes a2ui-scale-in {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* ================= 媒体与兜底组件 (L3) ================= */
+.a2ui-audio-card {
+  display: flex;
+  align-items: center;
+  background: var(--a2ui-surface-subtle, #f8fafc);
+  border-radius: 20rpx;
+  padding: 20rpx 28rpx;
+  gap: 16rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.a2ui-video {
+  width: 100%;
+  border-radius: 20rpx;
+  overflow: hidden;
+}
+
+.a2ui-fallback {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}

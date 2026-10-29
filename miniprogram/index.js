@@ -1,0 +1,45 @@
+const { A2UIEngine, ErrorCodes, KNOWN_COMPONENTS, toPropertyPath, computeTreePatches } = require('./core/engine');
+const {
+  resolveValue,
+  resolveDeep,
+  getValueByPath,
+  evaluateFunction,
+  isSafeRegex,
+  executePluralize,
+  openUrl,
+  createRendererCapabilities,
+  CURRENCY_SYMBOLS,
+  getCurrencySymbol,
+  formatCurrency,
+  formatTR35Date,
+  toBool,
+} = require('./core/data-model');
+const { hasMarkdown, parseMarkdown, parseInline, escapeHtml, sanitizeUrl } = require('./core/markdown');
+const { a2uiCustomBehavior } = require('./core/a2ui-custom-behavior');
+
+module.exports = {
+  A2UIEngine,
+  ErrorCodes,
+  KNOWN_COMPONENTS,
+  a2uiCustomBehavior,
+  resolveValue,
+  resolveDeep,
+  getValueByPath,
+  evaluateFunction,
+  isSafeRegex,
+  executePluralize,
+  openUrl,
+  createRendererCapabilities,
+  CURRENCY_SYMBOLS,
+  getCurrencySymbol,
+  formatCurrency,
+  formatTR35Date,
+  toBool,
+  hasMarkdown,
+  parseMarkdown,
+  parseInline,
+  escapeHtml,
+  sanitizeUrl,
+  toPropertyPath,
+  computeTreePatches,
+};

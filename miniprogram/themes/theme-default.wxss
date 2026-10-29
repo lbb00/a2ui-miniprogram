@@ -1,0 +1,51 @@
+/* ==========================================================================
+   A2UI Standard Theme (标准通用中性主题)
+   严格对标 A2UI 官方默认标准色深蓝 (#1777ee / #17e) 与中性灰阶
+   适合绝大部分生产环境小程序直接使用，支持作为宿主定制主题基底
+   ========================================================================== */
+
+page,
+.theme-default {
+  /* ================= 官方标准 Design Tokens (A2UI Universal Spec) ================= */
+  --a2ui-color-primary: #1777ee;
+  --a2ui-color-on-primary: #ffffff;
+  --a2ui-color-primary-light: rgba(23, 119, 238, 0.08);
+  --a2ui-color-primary-dark: #0f5bb8;
+  --a2ui-color-primary-hover: #0f5bb8;
+  --a2ui-color-surface: #ffffff;
+  --a2ui-color-on-surface: #1f2937;
+  --a2ui-color-border: rgba(0, 0, 0, 0.08);
+  --a2ui-color-input: #f8fafc;
+  --a2ui-color-on-input: #1f2937;
+  --a2ui-color-secondary: #dddddd;
+  --a2ui-color-on-secondary: #333333;
+
+  /* 尺寸与卡片专用 Token */
+  --a2ui-card-border-radius: 24rpx;
+  --a2ui-card-padding: 24rpx;
+  --a2ui-card-box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
+  --a2ui-button-border-radius: 8rpx;
+
+  /* ================= 向下兼容别名 (Historic Variable Aliases) ================= */
+  --a2ui-primary-color: var(--a2ui-color-primary);
+  --a2ui-primary-contrast: var(--a2ui-color-on-primary);
+  --a2ui-primary-light: var(--a2ui-color-primary-light);
+  --a2ui-primary-shadow: rgba(23, 119, 238, 0.2);
+  --a2ui-danger-color: #ef4444;
+
+  --a2ui-surface-bg: var(--a2ui-color-surface);
+  --a2ui-surface-subtle: #f8fafc;
+  --a2ui-input-bg: var(--a2ui-color-input);
+  --a2ui-border-color: var(--a2ui-color-border);
+  --a2ui-border-focus: var(--a2ui-color-primary);
+  --a2ui-card-shadow: var(--a2ui-card-box-shadow);
+
+  --a2ui-card-radius: var(--a2ui-card-border-radius);
+  --a2ui-btn-radius: var(--a2ui-button-border-radius);
+  --a2ui-input-radius: 16rpx;
+
+  --a2ui-text-primary: var(--a2ui-color-on-surface);
+  --a2ui-text-secondary: #4b5563;
+  --a2ui-text-muted: #9ca3af;
+  --a2ui-text-link: var(--a2ui-color-primary);
+}

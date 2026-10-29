@@ -1,0 +1,15 @@
+{
+  "miniprogramRoot": "miniprogram/",
+  "compileType": "miniprogram",
+  "projectname": "a2ui-miniprogram",
+  "description": "WeChat MiniProgram Renderer for A2UI Protocol",
+  "appid": "wx7377cdca54b98141",
+  "libVersion": "2.14.0",
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "urlCheck": false
+  }
+}

@@ -1,0 +1,10 @@
+:host {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.a2ui-node-slot-wrap {
+  width: 100%;
+  box-sizing: border-box;
+}

@@ -1,0 +1,37 @@
+:host {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.a2ui-fallback-box {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.a2ui-fallback-diag {
+  display: flex;
+  align-items: center;
+  padding: 12rpx 20rpx;
+  margin: 8rpx 0;
+  background-color: #fffbe6;
+  border: 1rpx solid #ffe58f;
+  border-radius: 12rpx;
+  font-size: 24rpx;
+  gap: 12rpx;
+}
+
+.a2ui-diag-tag {
+  font-weight: 600;
+  color: #faad14;
+}
+
+.a2ui-diag-text {
+  color: #8c6b00;
+  font-family: monospace;
+}
+
+.a2ui-fallback-children {
+  width: 100%;
+  box-sizing: border-box;
+}

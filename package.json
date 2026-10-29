@@ -1,0 +1,53 @@
+{
+  "name": "a2ui-miniprogram",
+  "version": "0.1.0",
+  "description": "WeChat MiniProgram Native Renderer for A2UI (Agent-to-User Interface) Protocol",
+  "main": "index.js",
+  "miniprogram": "miniprogram",
+  "types": "miniprogram/index.d.ts",
+  "files": [
+    "miniprogram",
+    "index.js"
+  ],
+  "scripts": {
+    "test": "node scripts/run-tests.js",
+    "test:unit": "node scripts/run-tests.js --unit",
+    "test:e2e": "node tests/e2e/run-automator.js --strict",
+    "test:sim": "node tests/e2e/headless-automator.test.js",
+    "test:perf": "node scripts/run-tests.js --perf",
+    "test:style": "node scripts/run-tests.js --style",
+    "lint": "oxlint",
+    "lint:fix": "oxlint --fix",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "changeset publish"
+  },
+  "engines": {
+    "node": "^22.0.0 || ^24.0.0"
+  },
+  "keywords": [
+    "a2ui",
+    "wechat",
+    "miniprogram",
+    "generative-ui",
+    "ai-agent",
+    "renderer"
+  ],
+  "author": "lbb00 <mr@lbb00.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lbb00/a2ui-miniprogram.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lbb00/a2ui-miniprogram/issues"
+  },
+  "homepage": "https://github.com/lbb00/a2ui-miniprogram#readme",
+  "devDependencies": {
+    "@changesets/cli": "^3.0.3",
+    "jest": "^29.7.0",
+    "miniprogram-automator": "^0.11.0",
+    "oxlint": "^1.90.0",
+    "puppeteer-core": "^24.3.0"
+  }
+}

@@ -1,0 +1,11 @@
+<view class="a2ui-node-slot-wrap">
+  <a2ui-custom-node 
+    node="{{node}}" 
+    surfaceId="{{surfaceId}}" 
+    uiState="{{uiState}}" 
+    scope="{{scope}}"
+    bind:action="onRelayAction"
+    bind:inputChange="onRelayInput"
+    bind:uiStateChange="onRelayUIState"
+  />
+</view>

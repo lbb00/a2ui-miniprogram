@@ -1,0 +1,47 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "unicorn",
+    "oxc"
+  ],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "no-control-regex": "off",
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_"
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["tests/**/*.js", "scripts/**/*.js", "fixtures/**/*.js"],
+      "rules": {
+        "no-unused-vars": "off"
+      }
+    }
+  ],
+  "env": {
+    "builtin": true,
+    "node": true
+  },
+  "globals": {
+    "Component": "readonly",
+    "Page": "readonly",
+    "App": "readonly",
+    "wx": "readonly",
+    "getApp": "readonly",
+    "getCurrentPages": "readonly"
+  },
+  "ignorePatterns": [
+    "node_modules",
+    "miniprogram_npm",
+    "dist",
+    "fixtures/official-examples"
+  ]
+}
