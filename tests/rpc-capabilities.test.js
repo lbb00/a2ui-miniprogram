@@ -274,6 +274,7 @@ assert(packageJson.scripts['test:sim'] && packageJson.scripts['test:sim'].includ
 assert(packageJson.scripts['test:simulate'] && packageJson.scripts['test:simulate'].includes('simulate-component-e2e.test.js'), 'test:simulate must run simulate-component-e2e');
 const runTestsScript = fs.readFileSync(path.resolve(__dirname, '../scripts/run-tests.js'), 'utf8');
 assert(runTestsScript.includes('headless-automator.test.js'), 'run-tests runner must include headless-automator');
+assert(runTestsScript.includes('simulate-component-e2e.test.js'), 'run-tests runner must include simulate-component-e2e');
 
 console.log('✔ package.json scripts strictly configured');
 

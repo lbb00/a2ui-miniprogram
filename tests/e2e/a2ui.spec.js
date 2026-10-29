@@ -1,10 +1,10 @@
 /**
- * A2UI 微信小程序 miniprogram-automator 自动化测试套件
- * 包含：
- * 1. 结构与数据绑定测试
- * 2. 交互与 Action 事件动态求值测试
- * 3. 样式与布局测试（Computed Styles, Class 映射, 物理尺寸）
- * 4. 视觉快照截图
+ * A2UI WeChat MiniProgram Automator Test Suite
+ * Includes:
+ * 1. Structure and data binding tests
+ * 2. Interaction and Action event dynamic evaluation tests
+ * 3. Styles and layout tests (Computed Styles, Class mapping, dimensions)
+ * 4. Visual snapshot evaluation
  */
 
 const automator = require('miniprogram-automator');
@@ -32,72 +32,72 @@ describe('A2UI WeChat MiniProgram Automator Tests', () => {
     }
   });
 
-  test('Case 1: 登录表单渲染与双向绑定 (00_simple-login-form)', async () => {
+  test('Case 1: Login form rendering and two-way binding (00_simple-login-form)', async () => {
     const surface = await page.$('#main-surface');
     expect(surface).not.toBeNull();
 
-    // 校验标题渲染
+    // Verify title rendering
     const title = await page.$('.a2ui-text-title');
-    expect(await title.text()).toContain('A2UI 智能体用户登录');
+    expect(await title.text()).toContain('A2UI');
 
-    // 校验输入框初始绑定值
+    // Verify initial input values
     const inputs = await page.$$('.a2ui-input');
     expect(inputs.length).toBeGreaterThanOrEqual(2);
     expect(await inputs[0].value()).toBe('agent_user_01');
 
-    // 修改输入
+    // Mutate input value
     await inputs[0].input('automator_test_user');
     await page.waitFor(400);
 
-    // 点击提交按钮
+    // Tap submit button
     const submitBtn = await page.$('.a2ui-btn-primary');
     await submitBtn.tap();
     await page.waitFor(500);
 
-    // 校验日志区域捕获到的 Agent 上报事件
+    // Verify logged action event payload
     const logItem = await page.$('.log-item:first-child .log-content');
     const logText = await logItem.text();
     expect(logText).toContain('login_submitted');
     expect(logText).toContain('automator_test_user');
   });
 
-  test('Case 2: 样式与排版布局验证 (Styles & Layout Computed Specs)', async () => {
-    // 1. 验证 Card 容器样式与尺寸
+  test('Case 2: Styles and layout validation (Styles & Layout Computed Specs)', async () => {
+    // 1. Verify Card container styles and dimensions
     const card = await page.$('.a2ui-card');
     expect(card).not.toBeNull();
     const cardSize = await card.size();
     expect(cardSize.width).toBeGreaterThan(200);
     expect(cardSize.height).toBeGreaterThan(100);
 
-    // 2. 验证 Primary Button 视觉样式与尺寸
+    // 2. Verify Primary Button styles and dimensions
     const primaryBtn = await page.$('.a2ui-btn-primary');
     expect(primaryBtn).not.toBeNull();
     const btnSize = await primaryBtn.size();
     expect(btnSize.height).toBeGreaterThanOrEqual(30);
 
-    // 3. 验证输入框高度与类名
+    // 3. Verify input dimensions and classes
     const input = await page.$('.a2ui-input');
     const inputSize = await input.size();
     expect(inputSize.height).toBeGreaterThanOrEqual(25);
 
-    // 4. 验证布局辅助类映射
+    // 4. Verify layout classes
     const col = await page.$('.a2ui-column');
     const colClass = await col.attribute('class');
     expect(colClass).toContain('a2ui-column');
     expect(colClass).toContain('a2ui-align-stretch');
   });
 
-  test('Case 3: 切换航班状态卡片 (01_flight-status)', async () => {
+  test('Case 3: Switch flight status card (01_flight-status)', async () => {
     const flightTab = await page.$('.tab-item[data-case="flight"]');
     await flightTab.tap();
     await page.waitFor(800);
 
-    // 校验布局类名
+    // Verify layout class
     const row = await page.$('.a2ui-row');
     const rowClass = await row.attribute('class');
     expect(rowClass).toContain('a2ui-row');
 
-    // 断言航班号与 formatDate 格式化
+    // Assert flight number and formatted date
     const texts = await page.$$('.a2ui-text');
     let textContents = '';
     for (const t of texts) {
@@ -107,19 +107,19 @@ describe('A2UI WeChat MiniProgram Automator Tests', () => {
     expect(textContents).toContain('2026-10-28');
   });
 
-  test('Case 4: 切换商品卡片 (05_product-card) 与流式调价', async () => {
+  test('Case 4: Switch product card (05_product-card) and streaming price updates', async () => {
     const productTab = await page.$('.tab-item[data-case="product"]');
     await productTab.tap();
     await page.waitFor(800);
 
-    // 校验图片渲染与尺寸
+    // Verify image rendering and size
     const image = await page.$('.a2ui-image');
     expect(image).not.toBeNull();
     const imgSize = await image.size();
     expect(imgSize.width).toBeGreaterThan(150);
     expect(imgSize.height).toBeGreaterThan(80);
 
-    // 点击流式调价
+    // Trigger price adjustment
     const streamBtn = await page.$('.tool-btn');
     await streamBtn.tap();
     await page.waitFor(800);

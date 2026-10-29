@@ -1,9 +1,9 @@
 <import src="./templates.wxml" />
 
-<!-- ==================== 宏观扩展：顶栏插槽 (Header Slot) ==================== -->
+<!-- ==================== Header Slot ==================== -->
 <slot name="header" />
 
-<!-- ==================== 核心卡片画布 (Surface Canvas) ==================== -->
+<!-- ==================== Surface Canvas ==================== -->
 <view 
   class="a2ui-surface {{darkMode ? 'a2ui-dark' : ''}}" 
   style="{{surfaceThemeStyle}}"
@@ -23,12 +23,12 @@
   <template is="tmpl_0_node" data="{{ i: localRenderTree, surfaceId, uiState }}" />
 </view>
 
-<!-- ==================== 空态与过渡态插槽 (Empty Slot) ==================== -->
+<!-- ==================== Empty & Transition Slot ==================== -->
 <view class="a2ui-surface-empty" wx:else>
   <slot name="empty">
     <text class="a2ui-loading-hint" wx:if="{{emptyHint}}">{{emptyHint}}</text>
   </slot>
 </view>
 
-<!-- ==================== 宏观扩展：底栏插槽 (Footer Slot) ==================== -->
+<!-- ==================== Footer Slot ==================== -->
 <slot name="footer" />

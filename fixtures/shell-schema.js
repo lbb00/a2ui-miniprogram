@@ -1,23 +1,23 @@
 /**
- * A2UI Self-Hosted Test App Shell 协议规范
- * 整个测试 App 外壳 100% 完全基于 A2UI 官方组件体系构建（彻底丢掉对话流，纯粹自举）
- * 对齐官方 README 画廊 #6a6eac 经典视觉风格
+ * A2UI Self-Hosted Test App Shell Protocol Specification
+ * The test App shell is 100% built using official A2UI components.
+ * Aligned with the official README gallery visual style (#6a6eac).
  */
 
 function createSelfHostedShellMessages(state = {}) {
   const {
-    caseIndex = 2, // 默认 00_incremental.json
+    caseIndex = 2, // Default: 00_incremental.json
     totalCases = 43,
     caseName = 'Incremental',
     caseFile = '00_incremental.json',
-    streamStatus = '已就绪',
+    streamStatus = 'Ready',
     streamProgress = '6/6',
     nodeCount = 25,
-    eventLogSummary = '等待组件交互。请点击下方卡片中的按钮（如 "Book now"），观察标准 A2UI 事件向外壳的回传闭环。',
+    eventLogSummary = 'Waiting for component interaction. Click buttons in the card below to observe standard A2UI event loopback.',
   } = state;
 
   return [
-    // 1. 初始化外壳画布
+    // 1. Initialize shell surface
     {
       version: 'v1.0',
       createSurface: {
@@ -25,7 +25,7 @@ function createSelfHostedShellMessages(state = {}) {
         catalogId: 'https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json',
       },
     },
-    // 2. 注入外壳响应式数据模型
+    // 2. Inject shell reactive data model
     {
       version: 'v1.0',
       updateDataModel: {
@@ -41,20 +41,20 @@ function createSelfHostedShellMessages(state = {}) {
         },
       },
     },
-    // 3. 构建外壳组件树 (全部采用 A2UI Basic Catalog 官方组件)
+    // 3. Build shell component tree (using official A2UI Basic Catalog components)
     {
       version: 'v1.0',
       updateComponents: {
         surfaceId: 'a2ui-test-shell',
         components: [
-          // 根容器
+          // Root container
           {
             id: 'root',
             component: 'Column',
             children: ['control_panel_card', 'event_monitor_card'],
           },
 
-          // 核心控制卡片 (A2UI Card)
+          // Control panel card (A2UI Card)
           {
             id: 'control_panel_card',
             component: 'Card',
@@ -67,7 +67,7 @@ function createSelfHostedShellMessages(state = {}) {
             ],
           },
 
-          // 第一行：用例切换行 (Row: Prev + Title/Meta + Next)
+          // First row: Case navigation (Row: Prev + Title/Meta + Next)
           {
             id: 'nav_row',
             component: 'Row',
@@ -89,7 +89,7 @@ function createSelfHostedShellMessages(state = {}) {
           {
             id: 'btn_prev_text',
             component: 'Text',
-            text: '‹ 上一个',
+            text: '‹ Prev',
           },
           {
             id: 'title_col',
@@ -123,7 +123,7 @@ function createSelfHostedShellMessages(state = {}) {
           {
             id: 'btn_next_text',
             component: 'Text',
-            text: '下一个 ›',
+            text: 'Next ›',
           },
 
           {
@@ -131,7 +131,7 @@ function createSelfHostedShellMessages(state = {}) {
             component: 'Divider',
           },
 
-          // 第二行：流式播放控制器 (Row: 4个紧凑功能按钮)
+          // Second row: Stream playback controls (Row: 4 compact buttons)
           {
             id: 'action_row',
             component: 'Row',
@@ -153,7 +153,7 @@ function createSelfHostedShellMessages(state = {}) {
           {
             id: 'label_replay',
             component: 'Text',
-            text: '🔄 流式拼装',
+            text: '🔄 Stream',
           },
           {
             id: 'btn_step',
@@ -169,7 +169,7 @@ function createSelfHostedShellMessages(state = {}) {
           {
             id: 'label_step',
             component: 'Text',
-            text: '⏭ 步进',
+            text: '⏭ Step',
           },
           {
             id: 'btn_direct',
@@ -185,7 +185,7 @@ function createSelfHostedShellMessages(state = {}) {
           {
             id: 'label_direct',
             component: 'Text',
-            text: '⚡ 直达',
+            text: '⚡ Direct',
           },
           {
             id: 'btn_picker',
@@ -201,7 +201,7 @@ function createSelfHostedShellMessages(state = {}) {
           {
             id: 'label_picker',
             component: 'Text',
-            text: '⌕ 选集 (43)',
+            text: '⌕ Cases (43)',
           },
 
           {
@@ -209,7 +209,7 @@ function createSelfHostedShellMessages(state = {}) {
             component: 'Divider',
           },
 
-          // 第三行：状态与节点指标行
+          // Third row: Status and metrics
           {
             id: 'status_row',
             component: 'Row',
@@ -224,7 +224,7 @@ function createSelfHostedShellMessages(state = {}) {
             text: {
               '@call': 'formatString',
               args: {
-                value: '🟢 ${/streamStatus} · 帧 ${/streamProgress}',
+                value: '🟢 ${/streamStatus} · Chunk ${/streamProgress}',
               },
             },
           },
@@ -235,12 +235,12 @@ function createSelfHostedShellMessages(state = {}) {
             text: {
               '@call': 'formatString',
               args: {
-                value: '已装配节点: ${/nodeCount}',
+                value: 'Nodes: ${/nodeCount}',
               },
             },
           },
 
-          // 事件闭环监控卡片 (A2UI Card)
+          // Event monitor card (A2UI Card)
           {
             id: 'event_monitor_card',
             component: 'Card',
@@ -250,7 +250,7 @@ function createSelfHostedShellMessages(state = {}) {
             id: 'monitor_title',
             component: 'Text',
             variant: 'label',
-            text: 'A2UI 双向交互闭环 (Renderer ➔ Self-Hosted Shell)',
+            text: 'A2UI Interaction Loopback (Renderer ➔ Self-Hosted Shell)',
           },
           {
             id: 'monitor_content',

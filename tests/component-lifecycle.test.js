@@ -1,18 +1,18 @@
 /**
- * Claude Code Review Round 6 专项加固完整回归测试套件
- * 
- * 覆盖全部 11 项审查发现：
- * [M1] setEngine/detached 监听器注销与无内存泄露
- * [M2] dispatchInputEvent 与页面单向数据流防重复写与差量保障
- * [M3] regex 彻底防御分支型与嵌套型 ReDoS (^(a|a)+$ 在 1ms 内安全拦截)
- * [M4] dispatchTapEvent 缺失引擎时标准结构化报错，杜绝残缺 action
- * [M5] DateTimeInput 本地客户端时区换算与 UTC ISO 往返保全
- * [M6] 单一源码真相源 (删去根目录冗余副本，统一 require miniprogram/)
- * [L1] ChoicePicker 初始无值时选择统一保全数组格式
- * [L2] ChoicePicker 多选 (mutuallyExclusive: false) 与 chips 模式支持
- * [L3] a2ui-surface conversationId 会话切换与新数组引用即刻重置
- * [L4] package.json files 字段精简与体积优化
- * [L5] uiState 键名特殊字符转义 (防 . 和 [ 导致 setData 路径畸形)
+ * Claude Code Review Round 6 Regression Hardening Test Suite
+ *
+ * Covers 11 audit items:
+ * [M1] setEngine/detached listener deregistration & zero memory leaks
+ * [M2] dispatchInputEvent unidirectional data flow, write protection & delta integrity
+ * [M3] regex complete protection against branched & nested ReDoS (^(a|a)+$ intercepted in <1ms)
+ * [M4] dispatchTapEvent missing engine produces structured error, prevents incomplete actions
+ * [M5] DateTimeInput local client timezone conversion & UTC ISO preservation
+ * [M6] Single source of truth (clean package structure)
+ * [L1] ChoicePicker initializes missing selection as array
+ * [L2] ChoicePicker multi-selection (mutuallyExclusive: false) & chips mode
+ * [L3] a2ui-surface conversationId change & message array reset
+ * [L4] package.json files field configuration
+ * [L5] uiState key sanitization (prevents . and [ from breaking setData path parsing)
  */
 
 const assert = require('assert');
@@ -22,13 +22,13 @@ const { A2UIEngine } = require('../miniprogram/core/engine');
 const { evaluateFunction } = require('../miniprogram/core/data-model');
 
 console.log('================================================================');
-console.log('🛡️  开始执行 Claude Code Review Round 6 深度加固回归测试套件');
+console.log('🛡️  Running Claude Code Review Round 6 Hardening Regression Suite');
 console.log('================================================================\n');
 
 // ----------------------------------------------------
-// [M1] setEngine/detached 监听器注销与防泄露
+// [M1] setEngine/detached listener deregistration & leak prevention
 // ----------------------------------------------------
-console.log('👉 [M1] 验证 setEngine 切换与 detached 自动注销监听器，无多倍触发');
+console.log('👉 [M1] Verify setEngine switching and detached listener cleanup without duplicate triggers');
 {
   let componentDef = null;
   global.Component = (def) => { componentDef = def; };
@@ -45,34 +45,34 @@ console.log('👉 [M1] 验证 setEngine 切换与 detached 自动注销监听器
   };
   Object.assign(instance, componentDef.methods);
 
-  // 模拟连续调用 3 次 setEngine
+  // Simulate consecutive setEngine calls
   instance.setEngine(engine);
   instance.setEngine(engine);
   instance.setEngine(engine);
 
-  // 发送 1 条错误消息
+  // Send 1 error message
   engine.emitError('surf_m1', 'EXECUTION_ERROR', '/test', 'Error M1 Test');
 
-  // 断言：由于每次 setEngine 都会取消旧的监听器，1 条错误只能触发 1 次 a2uiEvent / error
+  // Verify: 1 error message triggers only 1 a2uiEvent / error despite 3 setEngine calls
   const a2uiEvents = eventsTriggered.filter(e => e.name === 'a2uiEvent');
   const errorEvents = eventsTriggered.filter(e => e.name === 'error');
-  assert.strictEqual(a2uiEvents.length, 1, '调 3 次 setEngine 后，1 条错误只能触发 1 次 a2uiEvent');
-  assert.strictEqual(errorEvents.length, 1, '调 3 次 setEngine 后，1 条错误只能触发 1 次 error');
+  assert.strictEqual(a2uiEvents.length, 1, 'Calling setEngine 3 times should only trigger 1 a2uiEvent per error');
+  assert.strictEqual(errorEvents.length, 1, 'Calling setEngine 3 times should only trigger 1 error event per error');
 
-  // 组件销毁 detached
+  // Component detached lifecycle
   componentDef.lifetimes.detached.call(instance);
 
-  // 再次发送错误消息
+  // Send another error message
   engine.emitError('surf_m1', 'EXECUTION_ERROR', '/test', 'Error M1 Test 2');
-  // 断言：detached 后监听器已被清空，不会再收到新事件
-  assert.strictEqual(eventsTriggered.filter(e => e.name === 'a2uiEvent').length, 1, 'detached 后不应收到任何新事件');
-  console.log('   ✓ M1 监听器保存与注销机制校验 100% 通过');
+  // Verify: detached clears listeners, no further events received
+  assert.strictEqual(eventsTriggered.filter(e => e.name === 'a2uiEvent').length, 1, 'No new events should be received after detached');
+  console.log('   ✓ M1 listener registration & teardown verified 100%');
 }
 
 // ----------------------------------------------------
-// [M2] dispatchInputEvent 单向反写与差量更新保障
+// [M2] dispatchInputEvent write-back and delta update flags
 // ----------------------------------------------------
-console.log('👉 [M2] 验证 dispatchInputEvent 内部反写引擎与 _isHandlingInput 标志');
+console.log('👉 [M2] Verify dispatchInputEvent internal engine write-back and _isHandlingInput flag');
 {
   let componentDef = null;
   global.Component = (def) => { componentDef = def; };
@@ -105,20 +105,20 @@ console.log('👉 [M2] 验证 dispatchInputEvent 内部反写引擎与 _isHandli
   Object.assign(instance, componentDef.methods);
   instance.setEngine(engine);
 
-  // 触发输入变更
+  // Trigger input change
   instance.dispatchInputEvent('in_1', '/query', 'new_value');
 
-  // 断言：数据模型已在 engine 中被更新
+  // Assert dataModel was updated in engine
   assert.strictEqual(engine.surfaces.get(S).dataModel.query, 'new_value');
-  // 断言：_isHandlingInput 结束后已复位
+  // Assert _isHandlingInput is reset
   assert.strictEqual(instance._isHandlingInput, false);
-  console.log('   ✓ M2 单向反写与差量更新标志验证通过');
+  console.log('   ✓ M2 unidirectional write-back and patch flags verified');
 }
 
 // ----------------------------------------------------
-// [M3] regex 分支型与嵌套型 ReDoS 防爆
+// [M3] regex branched and nested ReDoS prevention
 // ----------------------------------------------------
-console.log('👉 [M3] 验证 regex 彻底防御分支型 (a|a)+ 与嵌套型 ReDoS');
+console.log('👉 [M3] Verify regex defense against branched (a|a)+ and nested ReDoS');
 {
   const dangerousBranchPattern = '^(a|a)+$';
   const maliciousInput = 'a'.repeat(30) + '!';
@@ -130,22 +130,22 @@ console.log('👉 [M3] 验证 regex 彻底防御分支型 (a|a)+ 与嵌套型 Re
   });
   const elapsed = Date.now() - t0;
 
-  assert.strictEqual(result, false, '危险的分支重叠正则必须被拦截并返回 false');
-  assert.ok(elapsed < 20, `耗时必须在 20ms 内 (实测: ${elapsed}ms)，绝不产生数秒卡顿`);
+  assert.strictEqual(result, false, 'Dangerous overlapping branch regex must be intercepted and return false');
+  assert.ok(elapsed < 20, `Execution time must be under 20ms (measured: ${elapsed}ms)`);
 
-  // 校验合法常见业务正则正常工作
+  // Verify safe common regular expressions
   const phoneRes = evaluateFunction('regex', { pattern: '^1[3-9]\\d{9}$', value: '13800138000' });
-  assert.strictEqual(phoneRes, true, '合法手机号正则应匹配成功');
+  assert.strictEqual(phoneRes, true, 'Valid phone pattern should match');
 
   const emailRes = evaluateFunction('regex', { pattern: '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$', value: 'test@example.com' });
-  assert.strictEqual(emailRes, true, '合法邮箱正则应匹配成功');
-  console.log(`   ✓ M3 ReDoS 安全防爆校验通过 (恶意分支正则匹配耗时: ${elapsed}ms)`);
+  assert.strictEqual(emailRes, true, 'Valid email pattern should match');
+  console.log(`   ✓ M3 ReDoS security defense verified (malicious regex processed in: ${elapsed}ms)`);
 }
 
 // ----------------------------------------------------
-// [M4] dispatchTapEvent 缺失引擎时标准结构化报错
+// [M4] dispatchTapEvent structured error when engine missing
 // ----------------------------------------------------
-console.log('👉 [M4] 验证 dispatchTapEvent 无引擎时不发残缺 action，统一上报错误');
+console.log('👉 [M4] Verify dispatchTapEvent emits error when engine is missing');
 {
   let componentDef = null;
   global.Component = (def) => { componentDef = def; };
@@ -175,18 +175,18 @@ console.log('👉 [M4] 验证 dispatchTapEvent 无引擎时不发残缺 action�
 
   instance.dispatchTapEvent('btn_no_engine');
 
-  // 断言：由于没有引擎，绝不能派发 action 事件，必须派发标准的 error 报文
-  assert.strictEqual(actionEvents.length, 0, '未注入引擎时绝对不能发出残缺的 action 消息');
-  assert.strictEqual(errorEvents.length, 1, '必须上报 1 条错误事件');
+  // Verify: without engine, no action event is dispatched; standard error is emitted
+  assert.strictEqual(actionEvents.length, 0, 'No malformed action message should be emitted without engine');
+  assert.strictEqual(errorEvents.length, 1, 'Exactly 1 error event must be reported');
   assert.strictEqual(errorEvents[0].error.code, 'EXECUTION_ERROR');
   assert.ok(errorEvents[0].error.message.includes('A2UIEngine instance is required'));
-  console.log('   ✓ M4 缺失引擎 Action 安全拦截与错误上报通过');
+  console.log('   ✓ M4 missing engine action interception & error reporting verified');
 }
 
 // ----------------------------------------------------
-// [M5] DateTimeInput 本地客户端时区换算与 UTC ISO 往返
+// [M5] DateTimeInput local client timezone conversion & UTC ISO preservation
 // ----------------------------------------------------
-console.log('👉 [M5] 验证 DateTimeInput 换算为客户端本地时区展示');
+console.log('👉 [M5] Verify DateTimeInput timezone conversion for local display');
 {
   const S = 'surf_m5';
   const engine = new A2UIEngine();
@@ -214,31 +214,31 @@ console.log('👉 [M5] 验证 DateTimeInput 换算为客户端本地时区展示
   const expH = String(expectedLocal.getHours()).padStart(2, '0');
   const expMin = String(expectedLocal.getMinutes()).padStart(2, '0');
 
-  assert.strictEqual(node.dateValue, `${expY}-${expM}-${expD}`, '必须转换为客户端本地年月日');
-  assert.strictEqual(node.timeValue, `${expH}:${expMin}`, '必须转换为客户端本地时分');
+  assert.strictEqual(node.dateValue, `${expY}-${expM}-${expD}`, 'Must convert to local year-month-day');
+  assert.strictEqual(node.timeValue, `${expH}:${expMin}`, 'Must convert to local hour-minute');
   assert.strictEqual(node.isIso, true);
-  console.log(`   ✓ M5 本地客户端时区转换断言通过 (${utcIso} -> ${node.dateValue} ${node.timeValue})`);
+  console.log(`   ✓ M5 client timezone conversion verified (${utcIso} -> ${node.dateValue} ${node.timeValue})`);
 }
 
 // ----------------------------------------------------
-// [M6 & L4] 单一源码真相源与 package.json files 精简
+// [M6 & L4] Single source of truth & package files
 // ----------------------------------------------------
-console.log('👉 [M6 & L4] 验证根目录无冗余副本，package.json files 精炼');
+console.log('👉 [M6 & L4] Verify zero root duplicates and clean package.json files');
 {
   const rootCoreExists = fs.existsSync(path.resolve(__dirname, '../core'));
   const rootComponentsExists = fs.existsSync(path.resolve(__dirname, '../components'));
-  assert.strictEqual(rootCoreExists, false, '根目录下的 core 副本必须彻底删除');
-  assert.strictEqual(rootComponentsExists, false, '根目录下的 components 副本必须彻底删除');
+  assert.strictEqual(rootCoreExists, false, 'Root core duplicate must be removed');
+  assert.strictEqual(rootComponentsExists, false, 'Root components duplicate must be removed');
 
   const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf-8'));
-  assert.deepStrictEqual(pkg.files, ['miniprogram', 'index.js'], 'package.json files 必须精简为 miniprogram 与 index.js');
-  console.log('   ✓ M6 & L4 单一真相源结构校验通过');
+  assert.deepStrictEqual(pkg.files, ['miniprogram', 'index.js'], 'package.json files must be miniprogram and index.js');
+  console.log('   ✓ M6 & L4 single source of truth verified');
 }
 
 // ----------------------------------------------------
-// [L1] ChoicePicker 初始无值时选择统一保持数组结构
+// [L1] ChoicePicker initial missing value normalized as array
 // ----------------------------------------------------
-console.log('👉 [L1] 验证 ChoicePicker 初始无值时统一写回数组类型');
+console.log('👉 [L1] Verify ChoicePicker initial missing value writes back array');
 {
   let componentDef = null;
   global.Component = (def) => { componentDef = def; };
@@ -255,7 +255,7 @@ console.log('👉 [L1] 验证 ChoicePicker 初始无值时统一写回数组类�
           { label: 'Option A', value: 'a' },
           { label: 'Option B', value: 'b' },
         ],
-        value: undefined, // 初始无值
+        value: undefined, // Initially undefined
       },
     },
     triggerEvent() {},
@@ -270,14 +270,14 @@ console.log('👉 [L1] 验证 ChoicePicker 初始无值时统一写回数组类�
     detail: { value: 0 },
   });
 
-  assert.deepStrictEqual(dispatchedVal, ['a'], '初始无值时写回的值必须是数组 ["a"]，而不是标量 "a"');
-  console.log('   ✓ L1 ChoicePicker 初始无值回写数组校验通过');
+  assert.deepStrictEqual(dispatchedVal, ['a'], 'Write-back value must be array ["a"] when initially empty');
+  console.log('   ✓ L1 ChoicePicker initial array normalization verified');
 }
 
 // ----------------------------------------------------
-// [L2] ChoicePicker 多选与 chips 模式
+// [L2] ChoicePicker multi-selection & chips mode
 // ----------------------------------------------------
-console.log('👉 [L2] 验证 ChoicePicker 多选 (mutuallyExclusive: false) 与 chips 选中态');
+console.log('👉 [L2] Verify ChoicePicker multi-selection (mutuallyExclusive: false) and chips state');
 {
   const S = 'surf_l2';
   const engine = new A2UIEngine();
@@ -312,19 +312,19 @@ console.log('👉 [L2] 验证 ChoicePicker 多选 (mutuallyExclusive: false) 与
   const chipsNode = tree.children[1];
 
   assert.strictEqual(multiNode.mutuallyExclusive, false);
-  assert.strictEqual(multiNode.options[0].selected, true, 'tech 必须被标记为 selected: true');
-  assert.strictEqual(multiNode.options[1].selected, false, 'music 必须被标记为 selected: false');
-  assert.strictEqual(multiNode.options[2].selected, true, 'news 必须被标记为 selected: true');
+  assert.strictEqual(multiNode.options[0].selected, true, 'tech must be marked selected: true');
+  assert.strictEqual(multiNode.options[1].selected, false, 'music must be marked selected: false');
+  assert.strictEqual(multiNode.options[2].selected, true, 'news must be marked selected: true');
 
   assert.strictEqual(chipsNode.displayStyle, 'chips');
   assert.strictEqual(chipsNode.options[0].selected, true);
-  console.log('   ✓ L2 ChoicePicker 多选与 chips 模式支持校验通过');
+  console.log('   ✓ L2 ChoicePicker multi-selection & chips verified');
 }
 
 // ----------------------------------------------------
-// [L3] a2ui-surface conversationId 会话切换与新数组引用重置
+// [L3] a2ui-surface conversationId reset and array reference change
 // ----------------------------------------------------
-console.log('👉 [L3] 验证 conversationId 变更与新数组引用彻底重置引擎状态');
+console.log('👉 [L3] Verify conversationId change and array reference resets engine state');
 {
   let componentDef = null;
   global.Component = (def) => { componentDef = def; };
@@ -338,23 +338,23 @@ console.log('👉 [L3] 验证 conversationId 变更与新数组引用彻底重�
     _processMessages() {},
   };
 
-  // 1. 测试 conversationId 变更触发重置
+  // 1. conversationId change triggers reset
   componentDef.properties.conversationId.observer.call(instance, 'session_2', 'session_1');
-  assert.strictEqual(cleared, true, 'conversationId 变更必须调用 clear()');
+  assert.strictEqual(cleared, true, 'conversationId change must invoke clear()');
 
-  // 2. 测试 messages 引用更换且不是 append 触发重置
+  // 2. messages array reference replaced triggers reset
   cleared = false;
   const oldMsgs = [{ createSurface: { surfaceId: 's1' } }];
-  const newMsgs = [{ createSurface: { surfaceId: 's2' } }]; // 首条消息不同
+  const newMsgs = [{ createSurface: { surfaceId: 's2' } }];
   componentDef.properties.messages.observer.call(instance, newMsgs, oldMsgs);
-  assert.strictEqual(cleared, true, '新消息数组引用替换且非追加时必须调用 clear()');
-  console.log('   ✓ L3 conversationId 与新数组引用重置校验通过');
+  assert.strictEqual(cleared, true, 'New messages array reference replacement must invoke clear()');
+  console.log('   ✓ L3 conversationId and message array reset verified');
 }
 
 // ----------------------------------------------------
-// [L5] uiState 键名安全字符转义 (防 . 和 [ 导致 setData 路径解析异常)
+// [L5] uiState safe property keys (prevents . and [ path parsing issues)
 // ----------------------------------------------------
-console.log('👉 [L5] 验证 uiState 键名中含特殊字符 (. 和 [) 安全转义');
+console.log('👉 [L5] Verify uiState keys containing special characters (. and [) are sanitized');
 {
   let componentDef = null;
   global.Component = (def) => { componentDef = def; };
@@ -368,24 +368,24 @@ console.log('👉 [L5] 验证 uiState 键名中含特殊字符 (. 和 [) 安全�
   };
   Object.assign(instance, componentDef.methods);
 
-  // 模拟组件 id 包含特殊字符，如 items[0].modal
+  // Simulate component id with special characters: items[0].modal
   instance.onModalOpen({
     currentTarget: { dataset: { id: 'items[0].modal', uikey: 'items_0__modal' } },
   });
 
-  assert.ok(setDataObj, '必须调用 setData');
-  assert.ok('uiState.items_0__modal_open' in setDataObj, '必须采用转义后的安全 key 设置 uiState');
+  assert.ok(setDataObj, 'Must call setData');
+  assert.ok('uiState.items_0__modal_open' in setDataObj, 'Must set uiState with sanitized key');
   assert.strictEqual(setDataObj['uiState.items_0__modal_open'], true);
 
-  // 若无 uikey，通过 _safeKey 自动转义
+  // Fallback to _safeKey when uikey is not provided
   instance.onTabTap({
     currentTarget: { dataset: { id: 'tabs.item[1]', idx: 2 } },
   });
-  assert.ok('uiState.tabs_item_1_' in setDataObj, '_safeKey 必须将特殊字符自动转为下划线');
+  assert.ok('uiState.tabs_item_1_' in setDataObj, '_safeKey must sanitize special characters to underscores');
   assert.strictEqual(setDataObj['uiState.tabs_item_1_'], 2);
-  console.log('   ✓ L5 uiState 键名安全字符转义防路径解析异常通过');
+  console.log('   ✓ L5 uiState sanitized key path handling verified');
 }
 
 console.log('\n================================================================');
-console.log('🎉 全部 11 项 Claude Code Review Round 6 深度加固单测 100% PASS！');
+console.log('🎉 All 11 Claude Code Review Round 6 hardening tests passed 100%');
 console.log('================================================================');

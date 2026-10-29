@@ -1,14 +1,14 @@
 /**
- * A2UI MiniProgram 用例切换防残影与单步调试状态机单测套件
- * 
- * 严格验证：
- * 1. 用例切换时，立即清除上一个用例所有视图、渲染树、节点计数和日志，无残影；
- * 2. a2ui-surface 组件对 renderTree: null 的即时清空响应（消除残留卡片）；
- * 3. 单步调试（stepNextChunk）：
- *    - 初始状态/已播放完毕状态下点击步进，能自动重置并从第 1 帧开始逐帧执行；
- *    - 自动播放过程中点击步进，立即暂停并执行下一 chunk；
- *    - 前序帧（如只有 createSurface 或 updateDataModel）时，状态清晰反馈，不卡死不假死；
- *    - 随着组件装配帧推进，渲染树与数据模型逐帧正确生成，直到全量就绪。
+ * A2UI MiniProgram Case Switching & Stepper State Machine Test Suite
+ *
+ * Verifies:
+ * 1. Immediate view, render tree, node count & log clearing on case switch without ghosting
+ * 2. a2ui-surface component immediate reset response to renderTree: null
+ * 3. Step execution (stepNextChunk):
+ *    - Automatic reset and frame-by-frame execution from initial or finished state
+ *    - Interruption of autoplay into step-by-step debug mode
+ *    - Preamble frame handling (createSurface / updateDataModel)
+ *    - Correct incremental render tree & data model construction
  */
 
 const assert = require('assert');
@@ -16,10 +16,10 @@ const { A2UIEngine } = require('../miniprogram/core/engine');
 const ALL_CASES = require('../fixtures/official-all-cases');
 
 console.log('================================================================');
-console.log('🧪 开始执行 A2UI 用例切换防残影与流式单步状态机专项单测');
+console.log('🧪 Running A2UI Case Switching & Stepper State Machine Tests');
 console.log('================================================================\n');
 
-// 模拟微信小程序环境
+// Mock WeChat miniprogram runtime environment
 global.wx = global.wx || {
   showToast: () => {},
 };
@@ -29,11 +29,11 @@ global.Page = (cfg) => {
   capturedPageConfig = cfg;
 };
 
-// 预先载入一次获取 pageConfig
+// Preload index.js to capture pageConfig
 require('../miniprogram/pages/index/index.js');
 const basePageConfig = capturedPageConfig;
 
-// 模拟微信小程序 a2ui-surface 组件环境
+// Mock WeChat miniprogram a2ui-surface component
 function createMockSurfaceComponent() {
   const surface = {
     data: {
@@ -62,16 +62,15 @@ function createMockSurfaceComponent() {
       }
       this.setData({ localRenderTree: null });
     },
-    // 模拟组件 properties observer
+    // Mock component properties observer
     onRenderTreeChange(newVal) {
-      // 修复后的关键逻辑：支持 newVal 为 null / undefined 时的清空
       this.setData({ localRenderTree: newVal || null });
     },
   };
   return surface;
 }
 
-// 模拟微信小程序 index 页面环境
+// Mock WeChat miniprogram index page
 function createMockPage() {
   const surfaceComponent = createMockSurfaceComponent();
 
@@ -79,7 +78,6 @@ function createMockPage() {
     data: JSON.parse(JSON.stringify(basePageConfig.data)),
     setData(patch) {
       Object.assign(this.data, patch);
-      // 模拟微信小程序父子组件属性绑定: 当页面 renderTree 变更，触发 surface 组件的 observer
       if ('renderTree' in patch) {
         surfaceComponent.onRenderTreeChange(patch.renderTree);
       }
@@ -99,158 +97,158 @@ function createMockPage() {
 }
 
 // ============================================================================
-// 测试用例 1: 验证 a2ui-surface observer 修复及 null 清空能力 (彻底杜绝旧界面卡片残留)
+// Test 1: Verify a2ui-surface observer reset on null (prevent stale card ghosting)
 // ============================================================================
-console.log('👉 [测试 1/4] 验证 a2ui-surface 渲染树 Observer 修复与残影清空机制');
+console.log('👉 [Test 1/4] Verify a2ui-surface render tree Observer reset & ghosting prevention');
 {
   const surface = createMockSurfaceComponent();
 
-  // 1. 模拟收到有效渲染树
+  // 1. Mount valid tree
   const fakeTree = { id: 'root', component: 'Card', children: [] };
   surface.onRenderTreeChange(fakeTree);
-  assert.strictEqual(surface.data.localRenderTree, fakeTree, '有效渲染树未能正确挂载至 localRenderTree');
+  assert.strictEqual(surface.data.localRenderTree, fakeTree, 'Valid render tree should mount to localRenderTree');
 
-  // 2. 模拟用例切换时传入 null
+  // 2. Pass null on case switch
   surface.onRenderTreeChange(null);
-  assert.strictEqual(surface.data.localRenderTree, null, '传入 null 时未能成功重置 localRenderTree，卡片会残留！');
+  assert.strictEqual(surface.data.localRenderTree, null, 'Passing null must reset localRenderTree');
 
-  // 3. 模拟传入 undefined
+  // 3. Pass undefined
   surface.onRenderTreeChange(fakeTree);
   assert.strictEqual(surface.data.localRenderTree, fakeTree);
   surface.onRenderTreeChange(undefined);
-  assert.strictEqual(surface.data.localRenderTree, null, '传入 undefined 时未能成功重置 localRenderTree');
+  assert.strictEqual(surface.data.localRenderTree, null, 'Passing undefined must reset localRenderTree');
 
-  // 4. 模拟显式 clear 调用
+  // 4. Explicit clear() invocation
   surface.onRenderTreeChange(fakeTree);
   surface.clear();
-  assert.strictEqual(surface.data.localRenderTree, null, 'clear() 无法清空画布');
+  assert.strictEqual(surface.data.localRenderTree, null, 'clear() must reset canvas');
 
-  console.log('   ✓ localRenderTree 在 newVal 为 null/undefined 时可即时清空，无任何残影残留\n');
+  console.log('   ✓ localRenderTree clears immediately on null/undefined, eliminating ghosting\n');
 }
 
 // ============================================================================
-// 测试用例 2: 验证用例切换逻辑（onSelectCase, prevCase, nextCase）的即时视图擦除
+// Test 2: Verify immediate view erase on case switch (onSelectCase, prevCase, nextCase)
 // ============================================================================
-console.log('👉 [测试 2/4] 验证切换用例时立即擦除旧视图与引擎状态');
+console.log('👉 [Test 2/4] Verify immediate erasure of old view and engine state on case switch');
 {
   const { page, surface } = createMockPage();
 
-  // 1. 先载入并直出一个复杂用例 (如 00_incremental.json)
+  // 1. Load complex case (00_incremental.json)
   const case0Index = ALL_CASES.findIndex((c) => c.file === '00_incremental.json');
   assert.ok(case0Index >= 0);
   page.switchCase(case0Index, false);
-  page.skipToDirect(); // 直出全部帧
+  page.skipToDirect();
 
-  assert.ok(page.data.nodeCount > 0, '旧用例 nodeCount 应大于 0');
-  assert.ok(surface.data.localRenderTree !== null, 'surface 组件中未能渲染旧用例');
+  assert.ok(page.data.nodeCount > 0, 'Old case nodeCount should be > 0');
+  assert.ok(surface.data.localRenderTree !== null, 'surface component rendered old case');
 
-  // 模拟旧用例产生了一些事件日志
+  // Simulate event logs
   page.setData({
     eventLogs: [{ time: '12:00:00', content: '{"action":"click"}' }],
   });
   assert.strictEqual(page.data.eventLogs.length, 1);
 
-  // 2. 切换到另一个用例 (如 01_flight-status.json)
+  // 2. Switch to another case (01_flight-status.json)
   const case1Index = ALL_CASES.findIndex((c) => c.file === '01_flight-status.json');
   assert.ok(case1Index >= 0);
 
-  // 触发切换 (不自动播放，便于检查刚切换瞬间的状态)
+  // Trigger switch without autoplay
   page.switchCase(case1Index, false);
 
-  // 核心断言：在切换瞬间，所有旧数据必须被彻底抹除！
-  assert.strictEqual(page.data.nodeCount, 0, '切换瞬间 nodeCount 必须重置为 0');
-  assert.strictEqual(page.data.currentMessageIndex, 0, '切换瞬间 currentMessageIndex 必须重置为 0');
-  assert.strictEqual(page.data.eventLogs.length, 0, '切换瞬间 eventLogs 必须清空');
-  assert.strictEqual(surface.data.localRenderTree, null, 'surface.localRenderTree 必须瞬间同步清空为 null，杜绝残留');
-  assert.strictEqual(page.data.currentSurfaceId, 'gallery-flight-status', 'currentSurfaceId 应更新为新用例');
+  // Assert all old data is wiped
+  assert.strictEqual(page.data.nodeCount, 0, 'nodeCount must reset to 0 upon switch');
+  assert.strictEqual(page.data.currentMessageIndex, 0, 'currentMessageIndex must reset to 0 upon switch');
+  assert.strictEqual(page.data.eventLogs.length, 0, 'eventLogs must be cleared upon switch');
+  assert.strictEqual(surface.data.localRenderTree, null, 'surface.localRenderTree must reset to null upon switch');
+  assert.strictEqual(page.data.currentSurfaceId, 'gallery-flight-status', 'currentSurfaceId must update to new case');
 
-  console.log('   ✓ 用例切换瞬间：原视图立即清空，节点计数归零，日志重置，绝无上一用例残留\n');
+  console.log('   ✓ Case switch cleans previous view, resets node count and clears event logs\n');
 }
 
 // ============================================================================
-// 测试用例 3: 验证从第 0 帧开始步进 (stepNextChunk) 的逐帧状态迁移与无假死
+// Test 3: Verify stepNextChunk from frame 0 state machine transitions
 // ============================================================================
-console.log('👉 [测试 3/4] 验证从第 0 帧开始单步步进的逐帧状态机迁移');
+console.log('👉 [Test 3/4] Verify stepNextChunk step-by-step state machine transitions from frame 0');
 {
   const { page, surface } = createMockPage();
 
-  // 选中 01_flight-status.json
+  // Select 01_flight-status.json
   const flightIndex = ALL_CASES.findIndex((c) => c.file === '01_flight-status.json');
-  page.switchCase(flightIndex, false); // 不自动播放
+  page.switchCase(flightIndex, false);
   const messages = page.data.currentCase.messages;
   const totalFrames = messages.length;
 
   assert.strictEqual(page.data.currentMessageIndex, 0);
 
-  // 逐帧单步执行
+  // Execute frame by frame
   for (let step = 0; step < totalFrames; step++) {
     const prevIndex = page.data.currentMessageIndex;
     page.stepNextChunk();
     const currIndex = page.data.currentMessageIndex;
 
-    assert.strictEqual(currIndex, prevIndex + 1, `步进失败: 帧索引未正确递增 (${prevIndex} -> ${currIndex})`);
+    assert.strictEqual(currIndex, prevIndex + 1, `Frame index should increment (${prevIndex} -> ${currIndex})`);
 
-    // 检查第 1 帧 (createSurface) 与第 2 帧 (updateDataModel) 前序帧状态反馈
+    // Check preamble frames (createSurface & updateDataModel)
     const msg = messages[step];
     if (msg.createSurface || msg.updateDataModel) {
       if (!surface.data.localRenderTree) {
-        assert.ok(page.data.streamSummaryText.length > 0, '前序未生成 root 帧时必须提供清晰的状态提示');
-        assert.ok(page.data.emptyHint.length > 0, '前序未生成 root 帧时 emptyHint 必须提示当前处于哪一帧');
-        assert.strictEqual(page.data.nodeCount, 0, '尚未挂载 root 时 nodeCount 应为 0');
+        assert.ok(page.data.streamSummaryText.length > 0, 'Preamble frames must provide status text');
+        assert.ok(page.data.emptyHint.length > 0, 'Preamble frames must provide emptyHint');
+        assert.strictEqual(page.data.nodeCount, 0, 'nodeCount is 0 before root component is mounted');
       }
     }
 
-    // 检查当 updateComponents 装配 root 后，渲染树非空
+    // Check tree after updateComponents mounts root
     if (surface.data.localRenderTree) {
-      assert.ok(page.data.nodeCount > 0, '有渲染树时 nodeCount 必须大于 0');
-      assert.strictEqual(page.data.emptyHint, '', '渲染树挂载后 emptyHint 应为空');
+      assert.ok(page.data.nodeCount > 0, 'nodeCount > 0 when render tree is mounted');
+      assert.strictEqual(page.data.emptyHint, '', 'emptyHint cleared after render tree is mounted');
     }
   }
 
-  // 全部执行完毕后检查最终状态
+  // Check final state
   assert.strictEqual(page.data.currentMessageIndex, totalFrames);
-  assert.ok(page.data.nodeCount >= 20, `01_flight-status 最终节点数应 >= 20，实际: ${page.data.nodeCount}`);
+  assert.ok(page.data.nodeCount >= 20, `01_flight-status final node count should be >= 20, got: ${page.data.nodeCount}`);
   assert.strictEqual(page.data.isStreaming, false);
 
-  console.log(`   ✓ 成功从第 0 帧逐帧步进至第 ${totalFrames} 帧，每帧状态流转精准，前序提示清晰，无任何卡死假死\n`);
+  console.log(`   ✓ Successfully stepped through all ${totalFrames} frames with accurate state transitions\n`);
 }
 
 // ============================================================================
-// 测试用例 4: 验证播放完毕后再次点击步进（重新从第 1 帧开始）与自动推流打断
+// Test 4: Verify replay after completion & autoplay interruption
 // ============================================================================
-console.log('👉 [测试 4/4] 验证播放完毕后“重播步进”交互与自动推流中途暂停打断');
+console.log('👉 [Test 4/4] Verify replay after completion and autoplay interruption');
 {
   const { page, surface } = createMockPage();
 
   const caseIndex = ALL_CASES.findIndex((c) => c.file === '00_incremental.json');
   page.switchCase(caseIndex, false);
-  page.skipToDirect(); // 直出全部 6 帧
+  page.skipToDirect();
 
   assert.strictEqual(page.data.currentMessageIndex, page.data.currentTotalMessages);
   assert.ok(page.data.nodeCount > 0);
 
-  // 1. 在已播放完毕状态下，点击步进一帧
+  // 1. Click stepNextChunk after playback complete
   page.stepNextChunk();
 
-  // 必须重置并执行了第 1 帧！
-  assert.strictEqual(page.data.currentMessageIndex, 1, '播放完毕后点击步进应重置并执行第 1 帧');
-  assert.ok(page.data.streamLog.includes('[Reset]'), '日志应记录重置为单步调试模式');
+  // Must reset and execute frame 1
+  assert.strictEqual(page.data.currentMessageIndex, 1, 'Clicking step after completion should reset and execute frame 1');
+  assert.ok(page.data.streamLog.includes('[Reset]'), 'Log should record reset to step mode');
 
-  // 2. 测试自动播放过程中打断
-  page.switchCase(caseIndex, true); // 启动自动推流
-  assert.ok(page.streamTimer !== null, '应有活跃的流式计时器');
+  // 2. Interrupt autoplay
+  page.switchCase(caseIndex, true);
+  assert.ok(page.streamTimer !== null, 'Active stream timer should exist');
   assert.strictEqual(page.data.isStreaming, true);
 
-  // 立即点击步进一帧
+  // Tap stepNextChunk immediately
   page.stepNextChunk();
 
-  // 计时器必须立即销毁，isStreaming 变为 false
-  assert.strictEqual(page.streamTimer, null, '步进应立即销毁自动推流计时器');
-  assert.strictEqual(page.data.isStreaming, false, 'isStreaming 应立即置为 false');
+  // Timer must be cleared, isStreaming false
+  assert.strictEqual(page.streamTimer, null, 'Stepping should destroy stream timer');
+  assert.strictEqual(page.data.isStreaming, false, 'isStreaming must become false');
 
-  console.log('   ✓ 播放完毕后点击步进可无缝重头单步调试；自动推流中途点击步进可立即打断暂停\n');
+  console.log('   ✓ Replay stepper resets seamlessly and interrupts autoplay\n');
 }
 
 console.log('================================================================');
-console.log('🎉 全部 4 项切换防残影与流式单步状态机单测 100% PASS！');
+console.log('🎉 All 4 case switching & stepper state machine tests passed 100%!');
 console.log('================================================================\n');

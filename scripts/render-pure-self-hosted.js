@@ -24,7 +24,11 @@ function renderTreeToHtml(node) {
     return `<div class="a2ui-column a2ui-align-${align} a2ui-justify-${justify}">${childrenHtml}</div>`;
   }
   if (comp === 'Row') {
-    const childrenHtml = (node.children || []).map(renderTreeToHtml).join('');
+    const childrenHtml = (node.children || []).map(child => {
+      const flexStyle = child.flexStyle || (child.weight ? `flex: ${child.weight} 1 0%; min-width: 0;` : (child.ownWidth ? 'flex: 0 0 auto;' : 'flex: 1 1 0%; min-width: 0;'));
+      const ownClass = child.ownWidth ? 'a2ui-item-own' : 'a2ui-item-flex';
+      return `<div class="a2ui-row-item ${ownClass}" style="${flexStyle}">${renderTreeToHtml(child)}</div>`;
+    }).join('');
     return `<div class="a2ui-row a2ui-align-${align} a2ui-justify-${justify}">${childrenHtml}</div>`;
   }
   if (comp === 'Card') {
@@ -77,22 +81,22 @@ async function main() {
   const page = await browser.newPage();
   const engine = new A2UIEngine();
 
-  // 1. 初始化 A2UI 自举外壳
+  // 1. Initialize A2UI self-hosted shell
   const curCase = ALL_CASES.find(c => c.file === '00_incremental.json');
   const shellMessages = createSelfHostedShellMessages({
     caseIndex: 2,
     totalCases: 43,
     caseName: curCase.name,
     caseFile: curCase.file,
-    streamStatus: '全量就绪',
+    streamStatus: 'Fully Ready',
     streamProgress: '6/6',
     nodeCount: 25,
-    eventLogSummary: '[20:47:30] 捕获到动作: book_now | 结构化载荷: {"restaurantName": "The Golden Fork"}',
+    eventLogSummary: '[20:47:30] Captured action: book_now | payload: {"restaurantName": "The Golden Fork"}',
   });
   engine.process(shellMessages);
   const shellTree = engine.getRenderTree('a2ui-test-shell');
 
-  // 2. 初始化官方用例
+  // 2. Initialize official test case
   engine.process(curCase.messages);
   const caseTree = engine.getRenderTree('gallery-incremental');
 
@@ -107,7 +111,7 @@ async function main() {
   <meta name="viewport" content="width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background-color: #d9d9e5; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif; }
+    body { background-color: #d9d9e5; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
     ${combinedCss}
     .self-hosted-page-scroll { height: 100vh; overflow-y: auto; }
     .self-hosted-layout { padding: 16px 16px 40px 16px; }
@@ -116,14 +120,14 @@ async function main() {
 <body>
   <div class="self-hosted-page-scroll">
     <div class="self-hosted-layout">
-      <!-- 1. A2UI 外壳 Surface (100% 由 A2UI Card/Row/Button 组装) -->
+      <!-- 1. A2UI Shell Surface (Assembled via Card/Row/Button) -->
       <div class="shell-surface-container">
         <div class="a2ui-surface">
           ${shellHtml}
         </div>
       </div>
 
-      <!-- 2. 官方用例主舞台 Surface -->
+      <!-- 2. Official test case stage surface -->
       <div class="case-surface-container">
         <div class="case-stage-header">
           <span class="case-stage-tag">OFFICIAL GALLERY SURFACE</span>

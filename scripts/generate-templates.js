@@ -16,7 +16,7 @@ function generateTemplate(level, maxLevel = 4) {
     ? `<a2ui-surface-layer node="{{i.contentNode || (i.children && (i.triggerNode ? i.children[1] : (i.children[1] || i.children[0])))}}" surfaceId="{{surfaceId}}" uiState="{{uiState}}" />`
     : `<template is="tmpl_${next}_node" data="{{ i: i.contentNode || (i.children && (i.triggerNode ? i.children[1] : (i.children[1] || i.children[0]))), surfaceId, uiState }}" />`;
 
-  return `<!-- ==================== LEVEL ${level} 模版 ==================== -->
+  return `<!-- ==================== LEVEL ${level} Template ==================== -->
 <template name="tmpl_${level}_node">
   <!-- 1. Column -->
   <view wx:if="{{i.component === 'Column'}}" class="a2ui-column a2ui-align-{{i.align}} a2ui-justify-{{i.justify}}">
@@ -100,7 +100,7 @@ function generateTemplate(level, maxLevel = 4) {
     webp="true"
   />
 
-  <!-- 8. Icon (优化：直接使用预解析 node.iconGlyph，O1) -->
+  <!-- 8. Icon (Optimized: direct use of pre-parsed node.iconGlyph, O1) -->
   <view wx:elif="{{i.component === 'Icon'}}" class="a2ui-icon a2ui-icon-{{i.name}}">
     <text>{{i.iconGlyph || '✦'}}</text>
   </view>
@@ -108,7 +108,7 @@ function generateTemplate(level, maxLevel = 4) {
   <!-- 9. Divider -->
   <view wx:elif="{{i.component === 'Divider'}}" class="a2ui-divider" />
 
-  <!-- 10. CheckBox (优化：包裹 label 支持全区域点击，L1) -->
+  <!-- 10. CheckBox (Optimized: wrapped in label to support full area tap, L1) -->
   <view wx:elif="{{i.component === 'CheckBox'}}" class="a2ui-checkbox-wrap">
     <checkbox-group class="a2ui-checkbox-group" data-id="{{i.id}}" data-path="{{i.valuePath}}" data-kind="bool" bindchange="handleInput">
       <label class="a2ui-checkbox">
@@ -124,10 +124,10 @@ function generateTemplate(level, maxLevel = 4) {
     <slider class="a2ui-slider" min="{{i.min}}" max="{{i.max}}" step="{{i.step}}" value="{{i.value}}" show-value="true" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handleInput" />
   </view>
 
-  <!-- 12. ChoicePicker (CR-2 & L1/L2: 支持选项数组、单选/多选 Chips 与下拉选择器) -->
+  <!-- 12. ChoicePicker (CR-2 & L1/L2: supports options array, single/multiple chips, and dropdown selector) -->
   <view wx:elif="{{i.component === 'ChoicePicker'}}" class="a2ui-picker-wrap">
-    <text class="a2ui-label">{{i.label || '选择'}}</text>
-    <!-- 1. Chips 模式 (支持单选与多选 Chips, L2) -->
+    <text class="a2ui-label">{{i.label || 'Select'}}</text>
+    <!-- 1. Chips mode (supports single and multiple choice chips, L2) -->
     <view wx:if="{{i.displayStyle === 'chips'}}" class="a2ui-choice-chips-wrap">
       <view 
         wx:for="{{i.options}}" 
@@ -142,7 +142,7 @@ function generateTemplate(level, maxLevel = 4) {
         <text>{{opt.label}}</text>
       </view>
     </view>
-    <!-- 2. 多选列表模式 (mutuallyExclusive === false 或 displayStyle === 'checkbox') -->
+    <!-- 2. Multiple selection list mode (mutuallyExclusive === false or displayStyle === 'checkbox') -->
     <block wx:elif="{{i.mutuallyExclusive === false || i.displayStyle === 'checkbox'}}">
       <checkbox-group class="a2ui-choice-multi-group" data-id="{{i.id}}" data-path="{{i.valuePath}}" data-kind="choice-multi" bindchange="handleInput">
         <label class="a2ui-choice-multi-item {{opt.selected ? 'checked' : ''}}" wx:for="{{i.options}}" wx:for-item="opt" wx:key="value">
@@ -151,21 +151,21 @@ function generateTemplate(level, maxLevel = 4) {
         </label>
       </checkbox-group>
     </block>
-    <!-- 3. 默认 Selector Picker 单选 -->
+    <!-- 3. Default Selector Picker single selection -->
     <picker wx:else mode="selector" range="{{i.options}}" range-key="label" value="{{i.selectedIndex !== undefined ? i.selectedIndex : 0}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handlePickerChange">
-      <view class="a2ui-picker-box"><text>{{i.displayLabel || (i.options && i.options[i.selectedIndex] ? i.options[i.selectedIndex].label : (i.value || '请点击选择'))}}</text></view>
+      <view class="a2ui-picker-box"><text>{{i.displayLabel || (i.options && i.options[i.selectedIndex] ? i.options[i.selectedIndex].label : (i.value || 'Please select'))}}</text></view>
     </picker>
   </view>
 
-  <!-- 13. DateTimeInput (CR-3: 完整支持 enableDate 与 enableTime 组合) -->
+  <!-- 13. DateTimeInput (CR-3: full support for enableDate and enableTime combinations) -->
   <view wx:elif="{{i.component === 'DateTimeInput'}}" class="a2ui-picker-wrap">
-    <text class="a2ui-label">{{i.label || '日期时间'}}</text>
+    <text class="a2ui-label">{{i.label || 'Date / Time'}}</text>
     <view class="a2ui-datetime-row">
       <picker wx:if="{{i.enableDate !== false}}" mode="date" value="{{i.dateValue}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" data-part="date" bindchange="handleDateTimeChange">
-        <view class="a2ui-picker-box"><text>📅 {{i.dateValue || '选择日期'}}</text></view>
+        <view class="a2ui-picker-box"><text>📅 {{i.dateValue || 'Select date'}}</text></view>
       </picker>
       <picker wx:if="{{i.enableTime}}" mode="time" value="{{i.timeValue}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" data-part="time" bindchange="handleDateTimeChange">
-        <view class="a2ui-picker-box"><text>🕒 {{i.timeValue || '选择时间'}}</text></view>
+        <view class="a2ui-picker-box"><text>🕒 {{i.timeValue || 'Select time'}}</text></view>
       </picker>
     </view>
   </view>
@@ -190,7 +190,7 @@ function generateTemplate(level, maxLevel = 4) {
     </block>
   </view>
 
-  <!-- 15. Modal (CR-H6 / CR-15 / L5: uiKey 防 setData 属性路径分割) -->
+  <!-- 15. Modal (CR-H6 / CR-15 / L5: uiKey prevents setData property path splitting) -->
   <view wx:elif="{{i.component === 'Modal'}}" class="a2ui-modal-container">
     <view data-id="{{i.id}}" data-uikey="{{i.uiKey}}" bindtap="onModalOpen" wx:if="{{i.triggerNode || (!i.contentNode && i.children && i.children[0])}}">
       ${triggerInvocation}
@@ -203,7 +203,7 @@ function generateTemplate(level, maxLevel = 4) {
     </view>
   </view>
 
-  <!-- 16. Tabs (CR-H6 / L5: uiKey 防 setData 属性路径分割) -->
+  <!-- 16. Tabs (CR-H6 / L5: uiKey prevents setData property path splitting) -->
   <view wx:elif="{{i.component === 'Tabs'}}" class="a2ui-tabs-wrap">
     <view class="a2ui-tab-bar" wx:if="{{i.tabs && i.tabs.length > 0}}">
       <view 
@@ -229,7 +229,7 @@ function generateTemplate(level, maxLevel = 4) {
   <!-- 17. AudioPlayer -->
   <view wx:elif="{{i.component === 'AudioPlayer'}}" class="a2ui-audio-card">
     <text class="a2ui-icon">🎵</text>
-    <text class="a2ui-text-body">{{i.title || i.name || '音频播放'}}</text>
+    <text class="a2ui-text-body">{{i.title || i.name || 'Audio playback'}}</text>
   </view>
 
   <!-- 18. Video -->
@@ -257,8 +257,8 @@ function generateTemplate(level, maxLevel = 4) {
 }
 
 const header = `<!-- 
-  A2UI 官方 18 大基础组件模板系统 (自动生成，保持各层级 100% 结构一致)
-  生成器: scripts/generate-templates.js
+  A2UI Official 18 Base Component Template System (Auto-generated, 100% structural consistency across levels)
+  Generator: scripts/generate-templates.js
 -->
 <wxs module="tools">
 module.exports = {};

@@ -1,12 +1,12 @@
 /* ==========================================================================
-   A2UI Official Purple Gallery Theme (官方画廊专属演示主题)
-   标志色: Slate Lavender 紫色 (#6a6eac / rgb(106, 110, 172))
-   严格遵循 A2UI 官方 Design Tokens 规范，仅用于官方画廊 36 个官方用例演示
+   A2UI Official Purple Gallery Theme (Official Gallery Demo Theme)
+   Primary color: Slate Lavender (#6a6eac / rgb(106, 110, 172))
+   Adheres to A2UI Design Tokens specification, used for official gallery cases.
    ========================================================================== */
 
 page,
 .theme-purple {
-  /* ================= 官方标准 Design Tokens (A2UI Universal Spec) ================= */
+  /* ================= Standard Design Tokens (A2UI Universal Spec) ================= */
   --a2ui-color-primary: #6a6eac;
   --a2ui-color-on-primary: #ffffff;
   --a2ui-color-primary-light: rgba(106, 110, 172, 0.1);
@@ -20,13 +20,13 @@ page,
   --a2ui-color-secondary: #e2e3f0;
   --a2ui-color-on-secondary: #1a1a24;
 
-  /* 尺寸与卡片专用 Token (画廊 18px / 36rpx 大圆角卡片) */
+  /* Sizing and Card Tokens (Gallery 18px / 36rpx rounded cards) */
   --a2ui-card-border-radius: 36rpx;
   --a2ui-card-padding: 24rpx;
   --a2ui-card-box-shadow: 0 4rpx 24rpx rgba(106, 110, 172, 0.08);
   --a2ui-button-border-radius: 8rpx;
 
-  /* ================= 向下兼容别名 (Historic Variable Aliases) ================= */
+  /* ================= Backward-Compatible Variable Aliases ================= */
   --a2ui-primary-color: var(--a2ui-color-primary);
   --a2ui-primary-contrast: var(--a2ui-color-on-primary);
   --a2ui-primary-light: var(--a2ui-color-primary-light);

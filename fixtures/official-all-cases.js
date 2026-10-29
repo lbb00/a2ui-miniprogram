@@ -1,4 +1,4 @@
-// A2UI 官方全部 36 组用例 (共 43 个场景) 全量集合
+// A2UI official test cases suite (all 36 suites, 43 total scenarios)
 module.exports = [
   {
     "file": "00_complex-layout.json",

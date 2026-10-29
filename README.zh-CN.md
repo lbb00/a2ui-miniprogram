@@ -10,7 +10,7 @@
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-22%20%7C%2024-brightgreen.svg?style=flat-square" alt="node version"/></a>
   <a href="https://developers.weixin.qq.com/miniprogram/dev/framework/"><img src="https://img.shields.io/badge/WeChat%20Mini%20Program-%E2%89%A5%202.14.0-07c160.svg?style=flat-square" alt="wechat miniprogram"/></a>
   <a href="https://github.com/a2ui-project/a2ui"><img src="https://img.shields.io/badge/A2UI%20Spec-v1.0%20Compliant-10b981.svg?style=flat-square" alt="spec"/></a>
-  <a href="scripts/run-tests.js"><img src="https://img.shields.io/badge/tests-23%2F23%20passed-success.svg?style=flat-square" alt="tests"/></a>
+  <a href="scripts/run-tests.js"><img src="https://img.shields.io/badge/tests-24%2F24%20passed-success.svg?style=flat-square" alt="tests"/></a>
   <a href="miniprogram/index.d.ts"><img src="https://img.shields.io/badge/TypeScript-Ready-3178c6.svg?style=flat-square" alt="typescript"/></a>
 </p>
 

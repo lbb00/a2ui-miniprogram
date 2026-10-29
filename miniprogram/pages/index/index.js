@@ -21,12 +21,12 @@ Page({
     currentCase: null,
     currentSurfaceId: '',
 
-    // 渲染树与节点
+    // Render tree and node counts
     renderTree: null,
     nodeCount: 0,
     emptyHint: '',
 
-    // 流式状态
+    // Streaming state
     isStreaming: false,
     currentMessageIndex: 0,
     currentTotalMessages: 0,
@@ -34,14 +34,14 @@ Page({
     streamSummaryText: '',
     streamLog: '',
 
-    // 交互与调试面板
+    // Interactive & debug drawer
     showDebugDrawer: false,
     activeDebugTab: 'stream',
     eventLogs: [],
   },
 
   onLoad() {
-    // 格式化全部用例
+    // Format all test case titles
     const caseTitles = ALL_CASES.map((item, idx) => {
       const num = (idx + 1).toString().padStart(2, '0');
       return `[${num}] ${item.name} (${item.file})`;
@@ -58,7 +58,7 @@ Page({
   },
 
   onReady() {
-    // 页面初次渲染完成后，安全获取 surface 组件实例并注入引擎 (确保首屏不白屏)
+    // Inject engine into surface component instance safely after initial mount
     const surfaceComp = typeof this.selectComponent === 'function' ? this.selectComponent('#main-surface') : null;
     if (surfaceComp && this.engine) {
       if (typeof surfaceComp.setEngine === 'function') {
@@ -94,27 +94,27 @@ Page({
       const sId = msg.createSurface.surfaceId;
       return {
         desc: `createSurface [${sId}]`,
-        hint: `画布 [${sId}] 初始化`,
+        hint: `Surface [${sId}] initialized`,
       };
     }
     if (msg.updateDataModel) {
       return {
         desc: `updateDataModel`,
-        hint: `数据模型注入`,
+        hint: `Data model injected`,
       };
     }
     if (msg.updateComponents) {
       const count = msg.updateComponents.components ? msg.updateComponents.components.length : 0;
       return {
         desc: `updateComponents (${count})`,
-        hint: `组件装配 (${count})`,
+        hint: `Components assembled (${count})`,
       };
     }
     if (msg.deleteSurface) {
       const sId = msg.deleteSurface.surfaceId;
       return {
         desc: `deleteSurface [${sId}]`,
-        hint: `画布销毁`,
+        hint: `Surface destroyed`,
       };
     }
     return { desc: 'message', hint: '' };
@@ -148,22 +148,22 @@ Page({
     if (!tree || count === 0) {
       if (currentIndex === 0) {
         emptyHint = '';
-        streamSummaryText = `0/${total} 帧`;
+        streamSummaryText = `0/${total} chunks`;
       } else if (currentIndex < total) {
-        emptyHint = `第 ${currentIndex}/${total} 帧 · ${hint}`;
-        streamSummaryText = `第 ${currentIndex}/${total} 帧 · ${hint}`;
+        emptyHint = `Chunk ${currentIndex}/${total} · ${hint}`;
+        streamSummaryText = `Chunk ${currentIndex}/${total} · ${hint}`;
       } else {
         emptyHint = '';
-        streamSummaryText = `${total}/${total} 帧`;
+        streamSummaryText = `${total}/${total} chunks`;
       }
     } else {
       emptyHint = '';
       if (this.data.isStreaming) {
-        streamSummaryText = `推流 · 帧 ${currentIndex}/${total} · ${count} 节点`;
+        streamSummaryText = `Streaming · Chunk ${currentIndex}/${total} · ${count} nodes`;
       } else if (currentIndex >= total) {
-        streamSummaryText = `就绪 · ${count} 节点`;
+        streamSummaryText = `Ready · ${count} nodes`;
       } else {
-        streamSummaryText = `单步 · 帧 ${currentIndex}/${total} · ${count} 节点`;
+        streamSummaryText = `Step · Chunk ${currentIndex}/${total} · ${count} nodes`;
       }
     }
 
@@ -176,7 +176,7 @@ Page({
   },
 
   /**
-   * 切换用例核心逻辑：立即重置引擎，清除上一个用例所有视图与缓存，无残影
+   * Switch test case: resets engine and clears all previous state cleanly.
    */
   switchCase(index, autoPlay = true) {
     if (this.streamTimer) {
@@ -195,20 +195,20 @@ Page({
     const messages = nextCase.messages || [];
     const surfaceId = this.findSurfaceIdFromMessages(messages);
 
-    // 立即重置引擎与事件监听
+    // Reset engine and subscription
     this.engine = new A2UIEngine();
     this.setupEngineSubscription();
 
-    // 显式触发 surface 组件清空并绑定新引擎（双重保障，清除残影）
+    // Explicitly clear surface component and bind new engine
     const surfaceComp = typeof this.selectComponent === 'function' ? this.selectComponent('#main-surface') : null;
     if (surfaceComp) {
       if (typeof surfaceComp.clear === 'function') surfaceComp.clear();
       if (typeof surfaceComp.setEngine === 'function') surfaceComp.setEngine(this.engine);
     }
 
-    const initLog = `> 切换: [${nextCase.name || nextCase.file}] (${messages.length} 帧)\n`;
+    const initLog = `> Switching: [${nextCase.name || nextCase.file}] (${messages.length} chunks)\n`;
 
-    // 立即清除所有上一个用例的数据与视图状态
+    // Clear previous view state
     this.setData({
       selectedCaseIndex: index,
       currentCase: nextCase,
@@ -220,7 +220,7 @@ Page({
       currentMessageIndex: 0,
       currentTotalMessages: messages.length,
       streamProgressPercent: 0,
-      streamSummaryText: autoPlay ? `推流中 · 0/${messages.length} 帧` : `0/${messages.length} 帧`,
+      streamSummaryText: autoPlay ? `Streaming · 0/${messages.length} chunks` : `0/${messages.length} chunks`,
       streamLog: initLog,
       eventLogs: [],
     });
@@ -240,8 +240,8 @@ Page({
         this.streamTimer = null;
         this.setData({
           isStreaming: false,
-          streamSummaryText: `就绪 · ${this.data.nodeCount} 节点`,
-          streamLog: appendCircularLog(this.data.streamLog, `> [Done] 全部 ${messages.length} 帧就绪\n`),
+          streamSummaryText: `Ready · ${this.data.nodeCount} nodes`,
+          streamLog: appendCircularLog(this.data.streamLog, `> [Done] All ${messages.length} chunks ready\n`),
         });
         return;
       }
@@ -269,13 +269,13 @@ Page({
   },
 
   /**
-   * 步进一帧 (stepNextChunk)：
-   * 1. 若正在自动播放，立即打断暂停并执行下一 chunk；
-   * 2. 若用例已播放完毕，重置引擎并从第 1 帧开始逐帧执行；
-   * 3. 每一帧执行后，精准刷新引擎渲染树并通过 notify 触发 UI；对前序无 root 帧显示极简状态。
+   * Step next chunk:
+   * 1. If currently auto-streaming, pause and step next chunk;
+   * 2. If finished, reset and step from chunk 1;
+   * 3. Process chunk, update log and notify surface.
    */
   stepNextChunk() {
-    // 1. 如果正在自动流式播放，立即暂停并打断定时器
+    // 1. Pause active streaming timer
     if (this.streamTimer) {
       clearInterval(this.streamTimer);
       this.streamTimer = null;
@@ -288,7 +288,7 @@ Page({
 
     let index = this.data.currentMessageIndex;
 
-    // 2. 如果用例已经播放完毕（或者处于越界状态），重置引擎并从第 1 帧重新开始单步执行
+    // 2. If finished, reset and start from chunk 1
     if (index >= messages.length) {
       if (this.unsubEngine) {
         this.unsubEngine();
@@ -309,11 +309,11 @@ Page({
         currentMessageIndex: 0,
         streamProgressPercent: 0,
         eventLogs: [],
-        streamLog: `> [Reset] 单步模式 (从第 1 帧开始)\n`,
+        streamLog: `> [Reset] Step mode (starting from chunk 1)\n`,
       });
     }
 
-    // 3. 执行当前帧
+    // 3. Process current chunk
     const msg = messages[index];
     const chunkNum = index + 1;
     const { desc } = this.describeMessage(msg);
@@ -331,7 +331,7 @@ Page({
       streamLog: newLog,
     });
 
-    // 4. 触发引擎通知刷新界面与前序帧状态反馈
+    // 4. Notify surface
     const surfaceId = this.data.currentSurfaceId || this.findSurfaceIdFromMessages(messages);
     if (surfaceId) {
       this.engine.notify(surfaceId);
@@ -339,7 +339,7 @@ Page({
   },
 
   /**
-   * 跳过流式过程，全量直出
+   * Skip streaming and assemble all chunks directly
    */
   skipToDirect() {
     if (this.streamTimer) {
@@ -350,7 +350,7 @@ Page({
     const currentCase = this.data.currentCase || this.data.allCases[this.data.selectedCaseIndex];
     const messages = currentCase ? (currentCase.messages || []) : [];
 
-    // 重置引擎并一次性全量灌入所有帧 (CR-M6: process 直接批处理，不重复 notify)
+    // Reset engine and process all messages in batch
     if (this.unsubEngine) {
       this.unsubEngine();
       this.unsubEngine = null;
@@ -369,7 +369,7 @@ Page({
       isStreaming: false,
       currentMessageIndex: messages.length,
       streamProgressPercent: 100,
-      streamLog: appendCircularLog(this.data.streamLog, `> [Skip] 直出全部 ${messages.length} 帧\n`),
+      streamLog: appendCircularLog(this.data.streamLog, `> [Skip] All ${messages.length} chunks assembled\n`),
     });
   },
 
@@ -434,14 +434,13 @@ Page({
   },
 
   onInputChange(_e) {
-    // a2ui-surface 组件内部已通过注入的 engine 完成数据反写与局部差量更新 (CR-M2)
-    // 此处仅接收事件通知记录日志，不再重复调用 engine.handleInputChange，彻底杜绝双重反写
+    // Engine handles input mutations and diff patching internally
   },
 
   clearLogs() {
     this.setData({
       eventLogs: [],
-      streamLog: `> 清空日志\n`,
+      streamLog: `> Logs cleared\n`,
     });
   },
 

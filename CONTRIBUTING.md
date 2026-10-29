@@ -11,7 +11,7 @@ We are committed to providing a welcoming, inclusive, and harassment-free enviro
 ### 1. Prerequisites
 - Node.js 22.x or 24.x (>= 22.0.0)
 - npm >= 10.0.0
-- WeChat DevTools (微信开发者工具) for manual and automator testing
+- WeChat DevTools for manual and automator testing
 
 ### 2. Getting Started
 ```bash

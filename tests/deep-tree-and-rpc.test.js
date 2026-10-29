@@ -18,50 +18,50 @@ const { evaluateFunction, resolveValue, isSafeRegex } = require('../miniprogram/
 const { parseMarkdown } = require('../miniprogram/core/markdown');
 
 console.log('================================================================');
-console.log('⚔️  开始执行 Round 10: 对抗性渗透加固与全要素一致性验证套件');
+console.log('⚔️  Running Round 10: Adversarial Security & Consistency Test Suite');
 console.log('================================================================\n');
 
 // =========================================================================
-// [1] Markdown 链接 URL 参数无双重转义 (No Double Escaping &amp;amp;)
+// [1] Markdown link URL query parameters without double escaping (&amp;amp;)
 // =========================================================================
-console.log('👉 [1/8] 验证 Markdown 链接多参数与特殊字符单次规范转义');
+console.log('👉 [1/8] Verify Markdown link multi-parameter URL sanitization without double escaping');
 {
-  const mdText = '请点击 [授权中心](https://example.com/oauth/authorize?client_id=123&redirect_uri=https://app.com/cb&scope=read&state=xyz)';
+  const mdText = 'Click [Auth Center](https://example.com/oauth/authorize?client_id=123&redirect_uri=https://app.com/cb&scope=read&state=xyz)';
   const html = parseMarkdown(mdText);
 
-  // 绝不能出现 &amp;amp; 畸变
-  assert.strictEqual(html.includes('&amp;amp;'), false, 'URL 中的 & 绝不能被二次转义为 &amp;amp;');
-  assert.ok(html.includes('href="https://example.com/oauth/authorize?client_id=123&amp;redirect_uri=https://app.com/cb&amp;scope=read&amp;state=xyz"'), 'URL 中的 & 应在 HTML 属性中正确单次转义为 &amp;');
+  // Must not have double escaping &amp;amp;
+  assert.strictEqual(html.includes('&amp;amp;'), false, 'URL ampersands must not be double escaped to &amp;amp;');
+  assert.ok(html.includes('href="https://example.com/oauth/authorize?client_id=123&amp;redirect_uri=https://app.com/cb&amp;scope=read&amp;state=xyz"'), 'URL ampersand should be single escaped as &amp;');
 
-  // 恶意协议链接安全拦截
-  const maliciousMd = '[恶意点击](javascript:alert(1)) 和 [数据伪协议](data:text/html,<script>alert(1)</script>)';
+  // Dangerous protocol interception
+  const maliciousMd = '[Malicious Link](javascript:alert(1)) and [Data Protocol](data:text/html,<script>alert(1)</script>)';
   const safeHtml = parseMarkdown(maliciousMd);
-  assert.ok(safeHtml.includes('data-href="#"'), 'javascript: 伪协议必须被降级为 #');
-  assert.strictEqual(safeHtml.includes('javascript:'), false, '输出 HTML 绝不能包含 javascript:');
-  console.log('   ✓ Markdown URL 多查询参数与 XSS 安全防御验证通过');
+  assert.ok(safeHtml.includes('data-href="#"'), 'javascript: pseudo-protocol must be downgraded to #');
+  assert.strictEqual(safeHtml.includes('javascript:'), false, 'Output HTML must never contain javascript:');
+  console.log('   ✓ Markdown URL query parameters & XSS defense verified');
 }
 
 // =========================================================================
-// [2] findCloseBrace 奇偶转义反斜杠精准识别
+// [2] findCloseBrace escaped backslash parity with parseNamedArgs
 // =========================================================================
-console.log('\n👉 [2/8] 验证 findCloseBrace 与 parseNamedArgs 结尾反斜杠转义');
+console.log('\n👉 [2/8] Verify findCloseBrace and parseNamedArgs escaped backslashes');
 {
-  // 字符串字面量中包含连续偶数个反斜杠 (表示单个转义的反斜杠本身，如 "path\\")
+  // String literal containing consecutive even backslashes representing an escaped backslash
   const exprWithEscapedBs = 'prefix ${formatString(value: "hello\\\\")} suffix';
   const resolved = resolveValue(exprWithEscapedBs, {});
-  assert.strictEqual(resolved, 'prefix hello\\ suffix', '偶数反斜杠应正确识别为非转义闭合引号');
+  assert.strictEqual(resolved, 'prefix hello\\ suffix', 'Even backslashes should be identified as non-escaping close quote');
 
-  // 单位置参数带偶数反斜杠
+  // Positional single arg with even backslashes
   const exprPositionalBs = '${formatString("test\\\\")}';
   const resolvedPos = resolveValue(exprPositionalBs, {});
-  assert.strictEqual(resolvedPos, 'test\\', '单位置参数带转义反斜杠应正确解析');
-  console.log('   ✓ 奇偶反斜杠判定与花括号闭合解析验证通过');
+  assert.strictEqual(resolvedPos, 'test\\', 'Single positional argument with escaped backslash should resolve correctly');
+  console.log('   ✓ Escaped backslash detection & brace parsing verified');
 }
 
 // =========================================================================
-// [3] 单位置参数缺省映射为 'value'
+// [3] Positional single argument defaults to 'value'
 // =========================================================================
-console.log('\n👉 [3/8] 验证 ${func(path)} 单位置参数缺省映射为 value');
+console.log('\n👉 [3/8] Verify ${func(path)} single positional argument defaults to value');
 {
   const dataModel = {
     isRegistered: false,
@@ -74,44 +74,44 @@ console.log('\n👉 [3/8] 验证 ${func(path)} 单位置参数缺省映射为 va
 
   // not(/isRegistered) -> true
   const notRes = resolveValue('${not(/isRegistered)}', dataModel);
-  assert.strictEqual(notRes, 'true', 'not(/isRegistered) 必须正确将 /isRegistered 映射为 value 求值');
+  assert.strictEqual(notRes, 'true', 'not(/isRegistered) must map /isRegistered to value');
 
   // not(/isAdmin) -> false
   const notAdminRes = resolveValue('${not(/isAdmin)}', dataModel);
-  assert.strictEqual(notAdminRes, 'false', 'not(/isAdmin) 必须求值为 false');
+  assert.strictEqual(notAdminRes, 'false', 'not(/isAdmin) must evaluate to false');
 
   // required(/email) -> true
   const reqEmail = resolveValue('${required(/email)}', dataModel);
-  assert.strictEqual(reqEmail, 'true', 'required(/email) 必须求值为 true');
+  assert.strictEqual(reqEmail, 'true', 'required(/email) must evaluate to true');
 
   // required(/emptyStr) -> false
   const reqEmpty = resolveValue('${required(/emptyStr)}', dataModel);
-  assert.strictEqual(reqEmpty, 'false', 'required(/emptyStr) 必须求值为 false');
+  assert.strictEqual(reqEmpty, 'false', 'required(/emptyStr) must evaluate to false');
 
   // formatDate(/timestamp) -> 2024-xx-xx
   const dateFormatted = resolveValue('${formatDate(/timestamp)}', dataModel);
-  assert.match(dateFormatted, /^\d{4}-\d{2}-\d{2}$/, 'formatDate(/timestamp) 单参数应正确输出标准日期');
+  assert.match(dateFormatted, /^\d{4}-\d{2}-\d{2}$/, 'formatDate(/timestamp) single arg should output ISO date');
 
-  console.log('   ✓ 单位置参数自动缺省映射为 value 验证通过');
+  console.log('   ✓ Single positional argument mapping to value verified');
 }
 
 // =========================================================================
-// [4] A2UIEngine.registerCustomComponent 与 registerComponent 双别名
+// [4] A2UIEngine.registerCustomComponent and registerComponent aliases
 // =========================================================================
-console.log('\n👉 [4/8] 验证 A2UIEngine 自定义组件注册双别名');
+console.log('\n👉 [4/8] Verify A2UIEngine custom component registration dual aliases');
 {
   const engine = new A2UIEngine();
   assert.strictEqual(typeof engine.registerComponent, 'function');
   assert.strictEqual(typeof engine.registerCustomComponent, 'function');
 
-  // 分别通过两种别名注册
+  // Register through both aliases
   engine.registerComponent('MapMarker');
   engine.registerCustomComponent('AudioWave');
 
   assert.ok(engine.customComponents.has('MapMarker'));
   assert.ok(engine.customComponents.has('AudioWave'));
 
-  // 验证注册的自定义组件在 updateComponents 时不会触发 UNKNOWN_COMPONENT 错误
+  // Registered custom component should not trigger UNKNOWN_COMPONENT
   let errorTriggered = false;
   engine.addErrorListener((e) => {
     if (e.error && e.error.code === 'UNKNOWN_COMPONENT') {
@@ -136,18 +136,18 @@ console.log('\n👉 [4/8] 验证 A2UIEngine 自定义组件注册双别名');
   const tree = engine.getRenderTree('surf_custom');
   assert.ok(tree);
   assert.strictEqual(tree.children.length, 2);
-  assert.strictEqual(errorTriggered, false, '已注册的自定义组件不应报错');
-  console.log('   ✓ registerCustomComponent 与 registerComponent 双别名验证通过');
+  assert.strictEqual(errorTriggered, false, 'Registered custom component should not trigger error');
+  console.log('   ✓ registerCustomComponent and registerComponent aliases verified');
 }
 
 // =========================================================================
-// [5] engine.process() 返回值契约与批量处理
+// [5] engine.process() return value contracts & batch processing
 // =========================================================================
-console.log('\n👉 [5/8] 验证 engine.process() 返回受影响的 surfaceId 或 RPC 结果');
+console.log('\n👉 [5/8] Verify engine.process() return values for surfaceId or RPC result');
 {
   const engine = new A2UIEngine();
 
-  // 1. 处理单个 surface 消息 -> 返回 surfaceId 字符串
+  // 1. Single surface message -> returns surfaceId string
   const resSingle = engine.process({
     version: 'v1.0',
     createSurface: {
@@ -155,9 +155,9 @@ console.log('\n👉 [5/8] 验证 engine.process() 返回受影响的 surfaceId �
       components: [{ id: 'root', component: 'Text', text: 'Hello' }],
     },
   });
-  assert.strictEqual(resSingle, 'surf_p1', '单个 surface 消息应返回对应的 surfaceId');
+  assert.strictEqual(resSingle, 'surf_p1', 'Single surface message should return surfaceId');
 
-  // 2. 处理多个 surface 消息 -> 返回 surfaceId 数组
+  // 2. Multiple surface messages -> returns surfaceId array
   const resMulti = engine.process([
     {
       version: 'v1.0',
@@ -174,9 +174,9 @@ console.log('\n👉 [5/8] 验证 engine.process() 返回受影响的 surfaceId �
       },
     },
   ]);
-  assert.deepStrictEqual(resMulti, ['surf_p2', 'surf_p3'], '多个 surface 消息应返回受影响的所有 surfaceId 数组');
+  assert.deepStrictEqual(resMulti, ['surf_p2', 'surf_p3'], 'Multiple surface messages should return array of surfaceIds');
 
-  // 3. 处理 RPC 消息 -> 返回 RPC 响应报文
+  // 3. RPC message -> returns RPC response message
   const resRpc = engine.process({
     version: 'v1.0',
     callRendererFunction: {
@@ -191,24 +191,24 @@ console.log('\n👉 [5/8] 验证 engine.process() 返回受影响的 surfaceId �
   assert.strictEqual(resRpc.rendererFunctionResponse.functionCallId, 'rpc_test_1');
   assert.strictEqual(resRpc.rendererFunctionResponse.value.success, false);
 
-  console.log('   ✓ engine.process() 返回值契约与多消息批量处理验证通过');
+  console.log('   ✓ engine.process() return value contract & batching verified');
 }
 
 // =========================================================================
-// [6] callRendererFunction 可选 surfaceId 与自定义异常错误码透传
+// [6] callRendererFunction optional surfaceId & custom error code preservation
 // =========================================================================
-console.log('\n👉 [6/8] 验证 callRendererFunction 可选 surfaceId 与自定义异常错误码');
+console.log('\n👉 [6/8] Verify callRendererFunction optional surfaceId & custom error code preservation');
 {
   const engine = new A2UIEngine();
 
-  // 注册一个会抛出特定错误码的特权函数
+  // Register function that throws error with custom code
   engine.registerRendererFunction('customRpcFail', () => {
     const err = new Error('Resource authorization timeout');
     err.code = 'TIMEOUT';
     throw err;
   });
 
-  // surfaceId 缺省调用 (无 surfaceId 字段)
+  // surfaceId omitted
   const rpcResp = engine.process({
     version: 'v1.0',
     callRendererFunction: {
@@ -223,16 +223,16 @@ console.log('\n👉 [6/8] 验证 callRendererFunction 可选 surfaceId 与自定
   assert.ok(rpcResp && rpcResp.rendererFunctionResponse);
   assert.strictEqual(rpcResp.rendererFunctionResponse.functionCallId, 'call_timeout_99');
   assert.ok(rpcResp.rendererFunctionResponse.error);
-  assert.strictEqual(rpcResp.rendererFunctionResponse.error.code, 'TIMEOUT', '自定义抛出的 TIMEOUT 错误码必须被准确透传，不能被降级为 generic EXECUTION_ERROR');
+  assert.strictEqual(rpcResp.rendererFunctionResponse.error.code, 'TIMEOUT', 'Custom thrown TIMEOUT code must be preserved');
   assert.ok(rpcResp.rendererFunctionResponse.error.message.includes('timeout'));
 
-  console.log('   ✓ callRendererFunction 可选 surfaceId 与错误码精准透传验证通过');
+  console.log('   ✓ callRendererFunction optional surfaceId & error code preservation verified');
 }
 
 // =========================================================================
-// [7] ChoicePicker 选项含 0, false, 负数时的严谨判定
+// [7] ChoicePicker selection for 0, false, negative numbers
 // =========================================================================
-console.log('\n👉 [7/8] 验证 ChoicePicker 选项值为 0, false, 负数时的状态判定');
+console.log('\n👉 [7/8] Verify ChoicePicker selection for 0, false, negative numbers');
 {
   const engine = new A2UIEngine();
   const S = 'surf_picker_zero';
@@ -256,33 +256,33 @@ console.log('\n👉 [7/8] 验证 ChoicePicker 选项值为 0, false, 负数时�
           {
             id: 'rating_picker',
             component: 'ChoicePicker',
-            label: '评分',
+            label: 'Rating',
             value: { '@path': '/selectedRating' },
             options: [
-              { label: '0 星 (很差)', value: 0 },
-              { label: '1 星 (一般)', value: 1 },
-              { label: '5 星 (很好)', value: 5 },
+              { label: '0 Stars (Poor)', value: 0 },
+              { label: '1 Star (Fair)', value: 1 },
+              { label: '5 Stars (Great)', value: 5 },
             ],
           },
           {
             id: 'status_picker',
             component: 'ChoicePicker',
-            label: '开关状态',
+            label: 'Switch State',
             value: { '@path': '/selectedStatus' },
             options: [
-              { label: '关闭 (False)', value: false },
-              { label: '开启 (True)', value: true },
+              { label: 'Disabled (False)', value: false },
+              { label: 'Enabled (True)', value: true },
             ],
           },
           {
             id: 'delta_picker',
             component: 'ChoicePicker',
-            label: '增量',
+            label: 'Delta',
             value: { '@path': '/selectedDelta' },
             options: [
-              { label: '负 5', value: -5 },
+              { label: 'Minus 5', value: -5 },
               { label: '0', value: 0 },
-              { label: '正 5', value: 5 },
+              { label: 'Plus 5', value: 5 },
             ],
           },
         ],
@@ -293,38 +293,38 @@ console.log('\n👉 [7/8] 验证 ChoicePicker 选项值为 0, false, 负数时�
   const tree = engine.getRenderTree(S);
   assert.ok(tree);
 
-  // 1. rating_picker: 值为 0，应准确选中选项 0
+  // 1. rating_picker: value 0 should select option 0
   const ratingNode = tree.children[0];
   assert.strictEqual(ratingNode.selectedIndex, 0);
-  assert.strictEqual(ratingNode.displayLabel, '0 星 (很差)');
+  assert.strictEqual(ratingNode.displayLabel, '0 Stars (Poor)');
   assert.strictEqual(ratingNode.options[0].selected, true);
   assert.strictEqual(ratingNode.options[1].selected, false);
 
-  // 2. status_picker: 值为 false，应准确选中选项 false
+  // 2. status_picker: value false should select option false
   const statusNode = tree.children[1];
   assert.strictEqual(statusNode.selectedIndex, 0);
-  assert.strictEqual(statusNode.displayLabel, '关闭 (False)');
+  assert.strictEqual(statusNode.displayLabel, 'Disabled (False)');
   assert.strictEqual(statusNode.options[0].selected, true);
   assert.strictEqual(statusNode.options[1].selected, false);
 
-  // 3. delta_picker: 值为 -5，应准确选中选项 -5
+  // 3. delta_picker: value -5 should select option -5
   const deltaNode = tree.children[2];
   assert.strictEqual(deltaNode.selectedIndex, 0);
-  assert.strictEqual(deltaNode.displayLabel, '负 5');
+  assert.strictEqual(deltaNode.displayLabel, 'Minus 5');
   assert.strictEqual(deltaNode.options[0].selected, true);
 
-  console.log('   ✓ ChoicePicker 针对 0、false、负数等假值边界值精准识别验证通过');
+  console.log('   ✓ ChoicePicker handling for 0, false, negative numbers verified');
 }
 
 // =========================================================================
-// [8] 深度溢出跳板 (Level Fallback) > 8 层递归渲染
+// [8] Trampoline deep nesting (> 8 levels)
 // =========================================================================
-console.log('\n👉 [8/8] 验证突破 8 层嵌套深度的跳板递归组装与节点推导');
+console.log('\n👉 [8/8] Verify trampoline recursive assembly beyond 8 nesting levels');
 {
   const engine = new A2UIEngine();
   const S = 'surf_deep_nesting';
 
-  // 组装 10 层嵌套的 Column -> Column -> ... -> Button
+  // Assemble 10 levels of Column -> Column -> ... -> Button
   const comps = [];
   const depthLimit = 10;
   for (let i = 0; i < depthLimit; i++) {
@@ -359,28 +359,28 @@ console.log('\n👉 [8/8] 验证突破 8 层嵌套深度的跳板递归组装与
   ]);
 
   const tree = engine.getRenderTree(S);
-  assert.ok(tree, '10 层深度树应成功生成');
+  assert.ok(tree, '10-level deep tree should be generated');
 
-  // 递归遍历到达底层
+  // Traverse down to leaf
   let curr = tree;
   let d = 0;
   while (curr.children && curr.children.length > 0) {
     curr = curr.children[0];
     d++;
   }
-  assert.strictEqual(d, 10, '深度必须准确到达 10 层');
+  assert.strictEqual(d, 10, 'Depth must reach 10 levels');
   assert.strictEqual(curr.component, 'Button');
   assert.strictEqual(curr.text, 'Deep Button Level 10');
 
-  // 验证最深层 Action 消息可正确创建
+  // Deepest Action message creation
   const actionMsg = engine.createActionMessage(S, 'deep_leaf_btn');
   assert.ok(actionMsg);
   assert.strictEqual(actionMsg.action.name, 'deep_click');
   assert.strictEqual(actionMsg.action.context.depth, 10);
 
-  console.log('   ✓ 10 层深度跳板展开与深层 Action 消息构建 100% 通过');
+  console.log('   ✓ 10-level deep trampoline unrolling & action message verified 100%');
 }
 
 console.log('\n================================================================');
-console.log('🎉 全部 8 项 Round 10 对抗性审查与全要素一致性测试 100% PASS！');
+console.log('🎉 All 8 Round 10 adversarial security tests passed 100%!');
 console.log('================================================================\n');

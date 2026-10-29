@@ -1,7 +1,7 @@
 /**
  * A2UI Engine for WeChat MiniProgram
- * 协议解析引擎与高保真状态机 (A2UI v1.0 规范)
- * 具备原型链安全防护、循环引用深度拦截、作用域路径追踪、标准 Action 消息上报、模板轻量化
+ * Protocol parsing engine and state machine (A2UI v1.0 specification)
+ * Prototype pollution protection, DAG depth guard, scoped path tracking, standard Action message reporting
  */
 
 const { resolveValue, resolveDeep, toBool, openUrl, createRendererCapabilities } = require('./data-model');
@@ -12,7 +12,7 @@ const MAX_DEPTH = 32;
 const MAX_TOTAL_NODES = 5000;
 
 /**
- * A2UI 标准结构化错误规范码 (renderer_to_agent.json#/$defs/error)
+ * A2UI standard structured error codes (renderer_to_agent.json#/$defs/error)
  */
 const ErrorCodes = {
   VALIDATION_FAILED: 'VALIDATION_FAILED',
@@ -23,7 +23,7 @@ const ErrorCodes = {
 };
 
 /**
- * Basic Catalog 官方已知组件集合
+ * Basic Catalog known component collection
  */
 const KNOWN_COMPONENTS = new Set([
   'Text',
@@ -63,10 +63,10 @@ class A2UIEngine {
   }
 
   /**
-   * 注册内置端侧特权函数（支持小程序安全环境与 Node 仿真）
+   * Register built-in client privileged functions (supports MiniProgram and Node test environment)
    */
   registerBuiltinRendererFunctions() {
-    // 1. getSystemInfo: 返回设备型号、操作系统、屏幕宽高等系统指标
+    // 1. getSystemInfo: returns system metrics such as model, OS, screen dimensions
     this.registerRendererFunction('getSystemInfo', () => {
       if (typeof wx !== 'undefined' && (wx.getSystemInfoSync || wx.getDeviceInfo)) {
         if (wx.getSystemInfoSync) {
@@ -96,7 +96,7 @@ class A2UIEngine {
       };
     });
 
-    // 2. setClipboard: 将内容写入剪贴板
+    // 2. setClipboard: write content to clipboard
     this.registerRendererFunction('setClipboard', (args = {}) => {
       const text = args.data !== undefined ? args.data : (args.text !== undefined ? args.text : String(args.value || ''));
       if (typeof wx !== 'undefined' && wx.setClipboardData) {
@@ -110,7 +110,7 @@ class A2UIEngine {
       return { success: true, data: this._clipboard || '', text: this._clipboard || '' };
     });
 
-    // 3. vibrate / hapticFeedback: 触发震动反馈
+    // 3. vibrate / hapticFeedback: trigger vibration feedback
     const vibrateHandler = (args = {}) => {
       const type = args.type || args.style || 'short';
       if (typeof wx !== 'undefined') {
@@ -127,7 +127,7 @@ class A2UIEngine {
     this.registerRendererFunction('vibrate', vibrateHandler);
     this.registerRendererFunction('hapticFeedback', vibrateHandler);
 
-    // 4. getStorage / setStorage: 本地存储读写
+    // 4. getStorage / setStorage: read/write local storage
     this.registerRendererFunction('setStorage', (args = {}) => {
       const key = String(args.key || '');
       const val = args.data !== undefined ? args.data : (args.value !== undefined ? args.value : null);
@@ -167,14 +167,14 @@ class A2UIEngine {
   }
 
   /**
-   * 注册自定义端侧函数
+   * Register custom client function
    */
   registerRendererFunction(name, handler) {
     this.rendererFunctions.set(name, handler);
   }
 
   /**
-   * 注册允许的自定义组件类型
+   * Register allowed custom component type
    */
   registerComponent(name) {
     this.customComponents.add(name);
@@ -185,7 +185,7 @@ class A2UIEngine {
   }
 
   /**
-   * 注册出站消息监听器（Action, rendererFunctionResponse, error 等）
+   * Register outbound message listener (Action, rendererFunctionResponse, error, etc.)
    */
   onOutboundMessage(listener) {
     this.outboundListeners.add(listener);
@@ -222,7 +222,7 @@ class A2UIEngine {
   }
 
   /**
-   * 产生标准结构化 error 协议消息 (renderer_to_agent.json#/$defs/error)
+   * Create standard structured error protocol message (renderer_to_agent.json#/$defs/error)
    */
   createErrorMessage(surfaceId, code, path, message) {
     const errorObj = {
@@ -260,7 +260,7 @@ class A2UIEngine {
   }
 
   /**
-   * 构造符合 renderer_to_agent.json#/$defs/rendererFunctionResponse 规范的标准响应报文
+   * Construct standard response message adhering to renderer_to_agent.json#/$defs/rendererFunctionResponse
    */
   createRendererFunctionResponse(functionCallId, result, error = null) {
     if (error) {
@@ -283,7 +283,7 @@ class A2UIEngine {
   }
 
   /**
-   * 执行端侧函数调用 (Agent -> Client RPC)
+   * Execute client function call (Agent -> Client RPC)
    */
   executeRendererFunction(callData) {
     if (!callData || typeof callData !== 'object') {
@@ -351,7 +351,7 @@ class A2UIEngine {
   }
 
   /**
-   * 注册渲染树更新监听器
+   * Register render tree update listener
    */
   subscribe(listener) {
     this.listeners.add(listener);
@@ -376,7 +376,7 @@ class A2UIEngine {
   }
 
   /**
-   * 处理单条或多条 A2UI 消息流
+   * Process single or multiple A2UI message streams
    */
   process(messages) {
     const msgs = Array.isArray(messages) ? messages : [messages];
@@ -397,7 +397,7 @@ class A2UIEngine {
       }
     }
 
-    // 批量通知所有受影响的 surface (CR-M4)
+    // Notify all affected surfaces in batch (CR-M4)
     for (const surfaceId of affectedSurfaces) {
       this.notify(surfaceId);
     }
@@ -460,7 +460,7 @@ class A2UIEngine {
           surface.reportedUnknown = new Set();
         }
 
-        // 支持 createSurface 自带的 components 和 dataModel (CR-H4)
+        // Support components and dataModel bundled with createSurface (CR-H4)
         if (dataModel && typeof dataModel === 'object') {
           const safeData = {};
           for (const [k, v] of Object.entries(dataModel)) {
@@ -536,19 +536,34 @@ class A2UIEngine {
 
       // 3. updateDataModel
       if (msg.updateDataModel) {
-        const { surfaceId, path, value } = msg.updateDataModel;
+        const { surfaceId, path, value, data } = msg.updateDataModel;
         const surface = this.surfaces.get(surfaceId);
         if (!surface) {
           this.emitError(surfaceId || 'unknown', ErrorCodes.VALIDATION_FAILED, '/', `Surface '${surfaceId}' not found`);
           return null;
         }
 
-        const segs = parsePointer(path || '/');
+        const modelPayload = value !== undefined ? value : data;
+
+        // Root update handling: explicit root pointer ("/" or "") replaces root,
+        // while omitted path safely merges top-level object fields.
+        if (!path || path === '/') {
+          if (path === '/' || path === '') {
+            surface.dataModel = modelPayload == null ? {} : modelPayload;
+          } else if (modelPayload && typeof modelPayload === 'object' && !Array.isArray(modelPayload)) {
+            surface.dataModel = Object.assign({}, surface.dataModel, modelPayload);
+          } else {
+            console.warn(`[A2UI] Ignored primitive root update on surface '${surfaceId}' to prevent dataModel wipeout.`);
+          }
+          return surfaceId;
+        }
+
+        const segs = parsePointer(path);
         try {
-          surface.dataModel = setIn(surface.dataModel, segs, value);
+          surface.dataModel = setIn(surface.dataModel, segs, modelPayload);
         } catch (err) {
           console.error(`[A2UI] updateDataModel error on path '${path}':`, err);
-          this.emitError(surfaceId, ErrorCodes.EXECUTION_ERROR, path || '/', err.message || String(err));
+          this.emitError(surfaceId, ErrorCodes.EXECUTION_ERROR, path, err.message || String(err));
         }
         return surfaceId;
       }
@@ -573,18 +588,18 @@ class A2UIEngine {
   }
 
   /**
-   * 递归组装微信小程序模板层所需的高保真渲染树 (Render Tree)
+   * Recursively build render tree for WeChat MiniProgram template layer
    */
   getRenderTree(surfaceId) {
     const surface = this.surfaces.get(surfaceId);
     if (!surface) return null;
 
-    // 严格规范：未收到 root 组件之前只缓存，不提前渲染残破树 (CR-H4)
+    // Strict spec: cache until root component arrives; avoid rendering broken tree (CR-H4)
     if (!surface.components.has('root')) {
       return null;
     }
 
-    // 清空实例注册表，重新构建
+    // Clear instance registry and rebuild
     surface.instances = new Map();
     const dataModel = surface.dataModel;
     let nodeCount = 0;
@@ -592,12 +607,12 @@ class A2UIEngine {
     const buildNode = (componentId, depth = 0, scope = null, instanceSuffix = '', ancestors = new Set()) => {
       if (!componentId) return null;
 
-      // 总节点数防爆上限 (CR-N3: 防范 DAG 指数爆炸)
+      // Total node limit to prevent DAG explosion (CR-N3)
       if (nodeCount >= MAX_TOTAL_NODES) {
         return null;
       }
 
-      // 深度上限与基于 (componentId @ 作用域数据路径) 的祖先防环 (CR-N2: 允许合法递归数据如评论树，精准拦截真循环)
+      // Max depth and ancestor cycle detection based on (componentId @ scoped data path) (CR-N2)
       const scopePath = scope && Array.isArray(scope.base) ? toPointer(scope.base) : '/';
       const ancestorKey = `${componentId}@${scopePath}`;
       if (depth > MAX_DEPTH || ancestors.has(ancestorKey)) {
@@ -611,7 +626,7 @@ class A2UIEngine {
       const nextAncestors = new Set(ancestors).add(ancestorKey);
       const instanceId = instanceSuffix ? `${comp.id}_${instanceSuffix}` : comp.id;
 
-      // 登记实例以支持精确 Action 上报与双向寻址 (CR-C1)
+      // Register instance to support accurate Action reporting and two-way addressing (CR-C1)
       surface.instances.set(instanceId, { comp, scope });
 
       const node = {
@@ -627,7 +642,7 @@ class A2UIEngine {
         children: [],
       };
 
-      // 提取 weight 与 ownWidth 弹性布局属性 (对齐官方 A2UI 规范: weight 映射为 flex-grow，未指定则为自适应宽度 flex: 0 0 auto)
+      // Extract flex layout properties: weight mapped to flex-grow, unassigned defaults to flex: 0 0 auto
       node.ownWidth = ['Icon', 'Button', 'CheckBox'].includes(comp.component) ||
         (comp.component === 'Image' && ['icon', 'avatar'].includes(comp.variant));
 
@@ -642,7 +657,7 @@ class A2UIEngine {
         node.flexStyle = 'flex: 0 0 auto;';
       }
 
-      // 动态求解文本与常见属性 (传入 scope 支持相对路径)
+      // Dynamically resolve text and common properties with scope
       const resolvableProps = [
         'text',
         'url',
@@ -664,13 +679,13 @@ class A2UIEngine {
         }
       }
 
-      // 判定并打标业务自定义扩展组件 (Micro-level Generics 机制)
+      // Detect and flag custom extension components (micro-level generics mechanism)
       const isCustomComponent = this.customComponents.has(comp.component) || !KNOWN_COMPONENTS.has(comp.component);
       if (isCustomComponent && comp.component !== 'Surface' && comp.component !== 'View') {
         node.isCustom = true;
         node.props = {};
 
-        // 引擎保留字，避免污染基础骨架结构
+        // Reserved engine keywords to prevent polluting structure
         const ENGINE_RESERVED = new Set([
           'id', 'component', 'variant', 'align', 'justify', 'fit', 'weight',
           'children', 'child', 'tabs', 'trigger', 'content', 'action', 'checks', 'disabled'
@@ -680,7 +695,7 @@ class A2UIEngine {
           if (!ENGINE_RESERVED.has(propKey)) {
             const resolvedVal = resolveDeep(propVal, dataModel, scope);
             node.props[propKey] = resolvedVal;
-            // 平铺到 node 顶层，极大简化宿主 WXML 模板的数据绑定取值
+            // Flatten to top of node to simplify WXML template data binding
             if (node[propKey] === undefined) {
               node[propKey] = resolvedVal;
             }
@@ -688,7 +703,7 @@ class A2UIEngine {
         }
       }
 
-      // Markdown 标题轻量解析 (对齐官方 Flutter: 未指定 variant 时走 Markdown 转换)
+      // Lightweight Markdown heading parsing (Flutter alignment: fallback when no variant is specified)
       if (node.component === 'Text' && typeof node.text === 'string') {
         if (!node.variant || node.variant === 'default') {
           if (!node.text.includes('\n')) {
@@ -711,18 +726,18 @@ class A2UIEngine {
           }
         }
 
-        // 富文本 Markdown 检测与渲染 (CR规范)
+        // Rich-text Markdown detection and rendering (CR spec)
         if (hasMarkdown(node.text)) {
           node.richHtml = parseMarkdown(node.text);
         }
       }
 
-      // Button 缺省变体对齐官方规范: OutlinedButton (描边按钮)
+      // Default Button variant aligned with spec: OutlinedButton
       if (node.component === 'Button' && !node.variant) {
         node.variant = 'outlined';
       }
 
-      // Icon 图标符号增强映射 (对标官方 Basic Catalog 图标体系)
+      // Icon glyph symbol mapping (aligned with Basic Catalog icon system)
       if (node.component === 'Icon') {
         const iconName = String(node.name || '');
         const iconMap = {
@@ -751,12 +766,15 @@ class A2UIEngine {
         node.iconGlyph = iconMap[iconName] || iconMap[iconName.toLowerCase()] || '✦';
       }
 
-      // value 与 valuePath 寻址 (CR-H1: 计算绝对 JSON Pointer，支持双向反写)
+      // value and valuePath resolution (calculates absolute JSON Pointer for two-way binding)
       if (comp.value !== undefined) {
         node.value = resolveValue(comp.value, dataModel, scope);
-        if (comp.value && typeof comp.value === 'object' && '@path' in comp.value) {
-          const segs = resolveSegs(comp.value['@path'], scope);
-          node.valuePath = toPointer(segs);
+        if (comp.value && typeof comp.value === 'object') {
+          const rawPath = comp.value['@path'] !== undefined ? comp.value['@path'] : comp.value.path;
+          if (rawPath !== undefined) {
+            const segs = resolveSegs(rawPath, scope);
+            node.valuePath = toPointer(segs);
+          }
         }
       }
       if (comp.valuePath) {
@@ -764,37 +782,40 @@ class A2UIEngine {
         node.valuePath = toPointer(segs);
       }
 
-      // CheckBox 特有 (规范中 CheckBox 状态对应 value 或 checked)
+      // CheckBox specific (spec supports boolean state in value or checked)
       if (comp.checked !== undefined) {
-        node.checked = Boolean(resolveValue(comp.checked, dataModel, scope));
-        if (comp.checked && typeof comp.checked === 'object' && '@path' in comp.checked && !node.valuePath) {
-          const segs = resolveSegs(comp.checked['@path'], scope);
-          node.valuePath = toPointer(segs);
+        node.checked = toBool(resolveValue(comp.checked, dataModel, scope));
+        if (comp.checked && typeof comp.checked === 'object' && !node.valuePath) {
+          const rawPath = comp.checked['@path'] !== undefined ? comp.checked['@path'] : comp.checked.path;
+          if (rawPath !== undefined) {
+            const segs = resolveSegs(rawPath, scope);
+            node.valuePath = toPointer(segs);
+          }
         }
       } else if (comp.component === 'CheckBox' && node.value !== undefined) {
-        node.checked = Boolean(node.value);
+        node.checked = toBool(node.value);
       }
 
-      // Slider 特有 (规范为 steps，兼容 step)
+      // Slider specific (spec is steps, fallback to step)
       if (comp.min !== undefined) node.min = Number(resolveValue(comp.min, dataModel, scope)) || 0;
       if (comp.max !== undefined) node.max = Number(resolveValue(comp.max, dataModel, scope)) || 100;
       const stepVal = comp.steps !== undefined ? comp.steps : comp.step;
       if (stepVal !== undefined) node.step = Number(resolveValue(stepVal, dataModel, scope)) || 1;
 
-      // ChoicePicker / Select 特有
+      // ChoicePicker / Select specific
       if (comp.options !== undefined) {
         node.options = resolveDeep(comp.options, dataModel, scope);
       }
       if (comp.component === 'ChoicePicker' && Array.isArray(node.options)) {
-        // 官方 v1.0 规范 (catalogs/basic): variant = "multipleSelection" | "mutuallyExclusive"
-        // 兼容保留: comp.mutuallyExclusive (boolean)
+        // Official v1.0 spec: variant = "multipleSelection" | "mutuallyExclusive"
+        // Backward compatibility: comp.mutuallyExclusive (boolean)
         const isMulti = comp.variant === 'multipleSelection' || comp.mutuallyExclusive === false;
         node.mutuallyExclusive = !isMulti;
         node.variant = isMulti ? 'multipleSelection' : 'mutuallyExclusive';
-        // 官方 v1.0: displayStyle = "checkbox" | "chips" | "picker"
+        // Official v1.0: displayStyle = "checkbox" | "chips" | "picker"
         node.displayStyle = comp.displayStyle || (isMulti ? 'checkbox' : 'picker');
 
-        // 规范化 options 项为统一的 { label, value } 格式 (兼容字符串/数字列表与对象列表)
+        // Normalize options to uniform { label, value } format (supports string/number/object items)
         const rawVal = node.value;
         const currentVals = Array.isArray(rawVal)
           ? rawVal.map(String)
@@ -837,13 +858,13 @@ class A2UIEngine {
         if (foundIdx >= 0) {
           node.displayLabel = node.options[foundIdx].label;
         } else {
-          node.displayLabel = targetVal !== undefined && targetVal !== null && targetVal !== '' ? String(targetVal) : '请点击选择';
+          node.displayLabel = targetVal !== undefined && targetVal !== null && targetVal !== '' ? String(targetVal) : 'Please select';
         }
-        // ChoicePicker 规范统一保持数组结构 (L1)
+        // ChoicePicker maintains uniform array structure (L1)
         node.isChoiceArray = true;
       }
 
-      // DateTimeInput 特有 (CR-C5 & M5: 完整支持 enableDate 与 enableTime 及 ISO 格式换算为本地时间展示)
+      // DateTimeInput specific (CR-C5 & M5: full support for enableDate and enableTime and ISO to local time)
       if (comp.component === 'DateTimeInput') {
         node.enableDate = comp.enableDate !== false;
         node.enableTime = Boolean(comp.enableTime);
@@ -864,7 +885,7 @@ class A2UIEngine {
           node.isIso = isIsoFormat;
 
           if (isIsoFormat) {
-            // 换算为客户端本地时区展示 (M5)
+            // Convert to local time string (M5)
             const Y = parsedDate.getFullYear();
             const M = String(parsedDate.getMonth() + 1).padStart(2, '0');
             const D = String(parsedDate.getDate()).padStart(2, '0');
@@ -891,7 +912,7 @@ class A2UIEngine {
         }
       }
 
-      // Action 动作绑定 (仅存轻量数据，不存 parent 链，规避体积膨胀，CR-N7 / CR-14)
+      // Action binding (lightweight data only, no parent chain, avoids memory bloat, CR-N7 / CR-14)
       if (comp.action) {
         node.action = comp.action;
         if (scope && typeof scope === 'object') {
@@ -908,10 +929,10 @@ class A2UIEngine {
         }
       }
 
-      // 校验规则与 Button 禁用状态 (CR-N6 / CR-4: 校验失败仅在 Button 上置 disabled: true；在 TextField 等输入组件上提取首个失败 check 的 message 为 validationError，不置 disabled)
+      // Validation checks and Button disabled state (CR-N6 / CR-4: failed check sets disabled: true on Button; extracts first failed check message as validationError on input fields, does not disable input)
       let disabled = false;
       if (comp.disabled !== undefined) {
-        disabled = Boolean(resolveValue(comp.disabled, dataModel, scope));
+        disabled = toBool(resolveValue(comp.disabled, dataModel, scope));
       }
       if (comp.checks && Array.isArray(comp.checks)) {
         const resolvedChecks = resolveDeep(comp.checks, dataModel, scope);
@@ -920,8 +941,8 @@ class A2UIEngine {
         if (failedCheck) {
           node.validationError = (failedCheck.message !== undefined && failedCheck.message !== null && failedCheck.message !== '')
             ? failedCheck.message
-            : '输入校验未通过';
-          // 仅 Button 会因 check 失败被置为 disabled；输入框需允许用户继续输入以修复校验
+            : 'Validation failed';
+          // Only Button is disabled on failed check; input fields allow editing to fix validation
           if (comp.component === 'Button') {
             disabled = true;
           }
@@ -931,9 +952,9 @@ class A2UIEngine {
         node.disabled = true;
       }
 
-      // ================= 子节点递归与 ChildList 模板展开 =================
+      // ================= Child Recursion & ChildList Template Expansion =================
 
-      // 情况 A: 静态数组子节点 ["id1", "id2"]
+      // Case A: Static array children ["id1", "id2"]
       if (Array.isArray(comp.children)) {
         for (const childId of comp.children) {
           const childNode = buildNode(childId, depth + 1, scope, instanceSuffix, nextAncestors);
@@ -942,14 +963,14 @@ class A2UIEngine {
           }
         }
       }
-      // 情况 B: 单一子节点 child: "id1"
+      // Case B: Single child "id1"
       else if (comp.child) {
         const childNode = buildNode(comp.child, depth + 1, scope, instanceSuffix, nextAncestors);
         if (childNode) {
           node.children.push(childNode);
         }
       }
-      // 情况 C: 动态列表模板对象 {"path": "/restaurants", "componentId": "restaurant_card"}
+      // Case C: Dynamic list template object {"path": "/restaurants", "componentId": "restaurant_card"}
       else if (comp.children && typeof comp.children === 'object' && comp.children.componentId) {
         const listPath = comp.children.path;
         const templateCompId = comp.children.componentId;
@@ -964,9 +985,9 @@ class A2UIEngine {
               data: item,
               parent: scope,
             };
-            // 安全隔离：严禁 Object.assign(itemScope, item)，防止 item 中的 base/data/index/parent 属性覆写引擎内部作用域 (CR-1)
+            // Security isolation: do not Object.assign(itemScope, item), prevents overwriting engine scope (CR-1)
 
-            // 唯一且抗碰撞的实例 ID 后缀 (CR-N4 / OPT-2: 避免多层列表前缀重复)
+            // Unique collision-resistant instance ID suffix (CR-N4 / OPT-2)
             const scopeId = Array.isArray(itemScope.base)
               ? itemScope.base.map((s) => String(s).replace(/:/g, '~c')).join(':')
               : String(index);
@@ -982,7 +1003,7 @@ class A2UIEngine {
         }
       }
 
-      // 情况 D: Tabs 容器解析 (保留 children 与 tabs 索引对齐，CR-N7)
+      // Case D: Tabs container resolution (keeps children aligned with tabs indices, CR-N7)
       if (Array.isArray(comp.tabs)) {
         node.tabs = comp.tabs.map((tab, tIdx) => {
           const tabTitle = resolveValue(tab.title, dataModel, scope) || `Tab ${tIdx + 1}`;
@@ -990,7 +1011,7 @@ class A2UIEngine {
           if (tab.child) {
             contentNode = buildNode(tab.child, depth + 1, scope, `${instanceSuffix}_tab_${tIdx}`, nextAncestors);
           }
-          // 缺失子组件时用空节点占位，保持索引对齐，防止下标错位与崩溃 (CR-N7)
+          // Placeholder node for missing child to maintain index alignment (CR-N7)
           const finalTabNode = contentNode || {
             id: `${tab.child || 'empty'}_tab_${tIdx}`,
             component: 'View',
@@ -1007,7 +1028,7 @@ class A2UIEngine {
         node.activeTab = comp.activeTab || 0;
       }
 
-      // 情况 E: Modal 触发器与内容解析 (CR-15: 具名字段存储，防止缺 trigger 时 content 顺位成为 children[0] 错位)
+      // Case E: Modal trigger and content resolution (CR-15: named field storage)
       if (comp.component === 'Modal' || comp.trigger || comp.content) {
         if (comp.trigger) {
           const trigNode = buildNode(comp.trigger, depth + 1, scope, `${instanceSuffix}_modal_trig`, nextAncestors);
@@ -1020,8 +1041,7 @@ class A2UIEngine {
           const cntNode = buildNode(comp.content, depth + 1, scope, `${instanceSuffix}_modal_cnt`, nextAncestors);
           if (cntNode) {
             node.contentNode = cntNode;
-            // 防止缺少 trigger 时 content 顺位成为 children[0] 导致视图错位：
-            // 仅在存在 triggerNode 时才将 contentNode 推入 children[1]
+            // Push contentNode to children[1] only if triggerNode exists to prevent misaligned indices:
             if (node.triggerNode) {
               node.children.push(cntNode);
             }
@@ -1029,13 +1049,12 @@ class A2UIEngine {
         }
       }
 
-      // Row 弹性布局优化：
-      // 1. 当 Row 指定了 spaceBetween, center, end, spaceAround, spaceEvenly 等主轴对齐方式，且其子项未显式声明 weight 权重时，
-      //    子项不能被强行赋予 flex: 1 1 0% 均分撑满（否则会导致 free space 为 0，使得 spaceBetween 等主轴分布彻底失效，右侧内容卡在正中间）。
-      //    此时未显式指定 weight 的子节点应维持内容自适应宽度 flex: 0 0 auto，使主轴空间能够正确在子项之间分布。
-      // 2. 当 Row 处于常规主轴对齐 (start 或未指定) 且未显式指定各子项 weight 时，如果子项包含 Column 容器，
-      //    Column 应当作为主内容容器自动撑满剩余可用空间 (对标官方 Column width: 100%，如 18_track-list / 11_purchase-complete / 26_podcast-episode)，
-      //    从而使固定宽度的标号、封面缩略图与右侧端点元素 (如时长、操作按钮) 正确分居两端。
+      // Row flex layout optimization:
+      // 1. When Row specifies spaceBetween, center, end, spaceAround, spaceEvenly and children lack explicit weight,
+      //    children should maintain content-adaptive width (flex: 0 0 auto) rather than forced flex: 1 1 0%,
+      //    allowing free space to distribute properly along the main axis.
+      // 2. When Row is default (start or unspecified) and children lack explicit weight, if a child contains Column,
+      //    Column should fill available space (width: 100% per spec), keeping fixed headers and right-hand endpoints at opposite ends.
       if (comp.component === 'Row' && node.children && node.children.length > 0) {
         const isDistributed = ['spaceBetween', 'center', 'end', 'spaceAround', 'spaceEvenly'].includes(node.justify);
         const hasWeightedChild = node.children.some((c) => c.weight !== undefined);
@@ -1065,7 +1084,7 @@ class A2UIEngine {
   }
 
   /**
-   * 创建标准 A2UI v1.0 客户端触发事件结构（Renderer-to-Agent，CR-C1）
+   * Creates standard A2UI v1.0 client event structure (Renderer-to-Agent, CR-C1)
    */
   createActionMessage(surfaceId, instanceId) {
     const surface = this.surfaces.get(surfaceId);
@@ -1105,7 +1124,7 @@ class A2UIEngine {
     }
 
     if (surface.sendDataModel && surface.dataModel !== undefined) {
-      // 深拷贝隔离数据模型快照，防止异步传输或后续原地修改污染快照 (CR-13)
+      // Deep copy isolated data model snapshot to prevent async mutations (CR-13)
       action.dataModel = JSON.parse(JSON.stringify(surface.dataModel));
     }
 
@@ -1120,7 +1139,7 @@ class A2UIEngine {
   }
 
   /**
-   * 兼容旧版调用入口
+   * Backward compatible invocation entry
    */
   createEventMessage(surfaceId, eventName, rawContext = {}, scope = null) {
     const surface = this.surfaces.get(surfaceId);
@@ -1135,7 +1154,7 @@ class A2UIEngine {
       context,
     };
     if (surface && surface.sendDataModel && surface.dataModel !== undefined) {
-      // 深拷贝隔离数据模型快照，防止异步传输或后续原地修改污染快照 (CR-13)
+      // Deep copy isolated data model snapshot to prevent async mutations (CR-13)
       action.dataModel = JSON.parse(JSON.stringify(surface.dataModel));
     }
 
@@ -1150,7 +1169,7 @@ class A2UIEngine {
   }
 
   /**
-   * 客户端输入反写本地 DataModel
+   * Write client input back to local DataModel
    */
   updateLocalValue(surfaceId, path, value) {
     return this.processMessage({
@@ -1164,8 +1183,8 @@ class A2UIEngine {
   }
 
   /**
-   * 客户端输入变更并触发监听通知 (CR-H1)
-   * 支持 options.silent 控制是否触发全量监听通知
+   * Client input change and trigger listener notification (CR-H1)
+   * Supports options.silent to control whether full listener notification is triggered
    */
   handleInputChange(surfaceId, path, value, options = {}) {
     const res = this.updateLocalValue(surfaceId, path, value);
@@ -1176,14 +1195,14 @@ class A2UIEngine {
   }
 
   /**
-   * 计算渲染树差量补丁集（定向刷新，规避受控输入框光标跳动）
+   * Compute render tree differential patch set (targeted refresh, prevents cursor jump)
    */
   computeTreePatches(oldTree, newTree, rootPrefix = 'localRenderTree', options = {}) {
     return computeTreePatches(oldTree, newTree, rootPrefix, options);
   }
 
   /**
-   * 派发 Action 动作消息至出站监听器
+   * Dispatch Action message to outbound listener
    */
   dispatchAction(surfaceId, instanceId) {
     const msg = this.createActionMessage(surfaceId, instanceId);
@@ -1194,14 +1213,14 @@ class A2UIEngine {
   }
 
   /**
-   * 清空引擎所有画布状态 (OPT-1)
+   * Clear all engine surface states (OPT-1)
    */
   clear() {
     this.surfaces.clear();
   }
 
   /**
-   * 彻底销毁引擎实例并释放所有监听器与内部状态
+   * Destroy engine instance and release all listeners and internal states
    */
   destroy() {
     this.surfaces.clear();

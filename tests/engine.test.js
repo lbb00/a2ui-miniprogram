@@ -2,7 +2,7 @@ const assert = require('assert');
 const { A2UIEngine } = require('../miniprogram/core/engine');
 const { getValueByPath, resolveValue, resolveDeep } = require('../miniprogram/core/data-model');
 
-console.log('--- [1] 测试 A2UI 最新数据模型与表达式 ---');
+console.log('--- [1] Test A2UI Data Model and Expression Resolution ---');
 
 const model = {
   user: {
@@ -18,11 +18,11 @@ const model = {
   },
 };
 
-// 1. JSON Pointer 测试
+// 1. JSON Pointer tests
 assert.strictEqual(getValueByPath(model, '/user/name'), 'Alice');
 assert.strictEqual(getValueByPath(model, '/flight/number'), 'CA1501');
 
-// 2. formatDate 测试
+// 2. formatDate tests
 const formattedDate = resolveValue(
   {
     '@call': 'formatDate',
@@ -31,9 +31,9 @@ const formattedDate = resolveValue(
   model
 );
 assert.strictEqual(formattedDate, '2026-10-28');
-console.log('✓ formatDate 求解成功:', formattedDate);
+console.log('✓ formatDate resolved successfully:', formattedDate);
 
-// 3. formatCurrency 测试
+// 3. formatCurrency tests
 const formattedPrice = resolveValue(
   {
     '@call': 'formatCurrency',
@@ -42,9 +42,9 @@ const formattedPrice = resolveValue(
   model
 );
 assert.strictEqual(formattedPrice, '¥1299.50');
-console.log('✓ formatCurrency 求解成功:', formattedPrice);
+console.log('✓ formatCurrency resolved successfully:', formattedPrice);
 
-// 4. resolveDeep 递归解析 Action Context
+// 4. resolveDeep recursive context resolution
 const rawContext = {
   currentUser: { '@path': '/user/name' },
   orderFlight: { '@path': '/flight/number' },
@@ -56,12 +56,12 @@ assert.deepStrictEqual(resolvedContext, {
   orderFlight: 'CA1501',
   staticId: 'xyz_123',
 });
-console.log('✓ resolveDeep 深度上下文解析成功:', resolvedContext);
+console.log('✓ resolveDeep context resolution verified:', resolvedContext);
 
-console.log('\n--- [2] 测试 A2UI Engine 与 双向绑定 ---');
+console.log('\n--- [2] Test A2UI Engine & Two-Way Data Binding ---');
 const engine = new A2UIEngine();
 
-// 5. 载入官方 00_simple-login-form
+// 5. Load 00_simple-login-form structure
 engine.process([
   {
     version: 'v1.0',
@@ -80,13 +80,13 @@ engine.process([
         {
           id: 'input_user',
           component: 'TextField',
-          label: '用户名',
+          label: 'Username',
           value: { '@path': '/username' },
         },
         {
           id: 'btn_login',
           component: 'Button',
-          text: '登录',
+          text: 'Login',
           action: {
             event: {
               name: 'doLogin',
@@ -111,19 +111,19 @@ engine.process([
 let tree = engine.getRenderTree('surf_login');
 assert.strictEqual(tree.children[0].value, 'test_user_001');
 assert.strictEqual(tree.children[0].valuePath, '/username');
-console.log('✓ 初始数据模型注入与路径记录通过');
+console.log('✓ Initial dataModel injection and valuePath resolution verified');
 
-// 6. 模拟客户端输入反写
+// 6. Simulate client input mutation
 engine.handleInputChange('surf_login', '/username', 'new_agent_admin');
 tree = engine.getRenderTree('surf_login');
 assert.strictEqual(tree.children[0].value, 'new_agent_admin');
-console.log('✓ 客户端输入反写 DataModel 并在渲染树中即时生效');
+console.log('✓ Client input update reflected in dataModel and render tree');
 
-// 7. 模拟点击事件上报，校验 context 中的动态取值
+// 7. Simulate click event reporting with dynamic context mapping
 const eventMsg = engine.createEventMessage('surf_login', 'doLogin', {
   user: { '@path': '/username' },
 });
 assert.strictEqual(eventMsg.event.context.user, 'new_agent_admin');
-console.log('✓ 客户端事件上报封装与动态 Context 映射测试通过:', eventMsg.event);
+console.log('✓ Event dispatch encapsulation & dynamic context verified:', eventMsg.event);
 
-console.log('\n🎉 所有核心测试用例验证通过！');
+console.log('\n🎉 All core engine tests passed successfully!');
