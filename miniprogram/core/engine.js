@@ -767,6 +767,10 @@ class A2UIEngine {
       // CheckBox 特有 (规范中 CheckBox 状态对应 value 或 checked)
       if (comp.checked !== undefined) {
         node.checked = Boolean(resolveValue(comp.checked, dataModel, scope));
+        if (comp.checked && typeof comp.checked === 'object' && '@path' in comp.checked && !node.valuePath) {
+          const segs = resolveSegs(comp.checked['@path'], scope);
+          node.valuePath = toPointer(segs);
+        }
       } else if (comp.component === 'CheckBox' && node.value !== undefined) {
         node.checked = Boolean(node.value);
       }

@@ -47,6 +47,7 @@ const TEST_SUITES = [
   // 6. E2E 与官方全量 36 画廊渲染
   'e2e/official-all-36.test.js',
   'e2e/headless-automator.test.js',
+  'e2e/simulate-component-e2e.test.js',
   'e2e/adversarial-render.test.js',
 ];
 

@@ -110,7 +110,7 @@ function generateTemplate(level, maxLevel = 4) {
 
   <!-- 10. CheckBox (优化：包裹 label 支持全区域点击，L1) -->
   <view wx:elif="{{i.component === 'CheckBox'}}" class="a2ui-checkbox-wrap">
-    <checkbox-group data-id="{{i.id}}" data-path="{{i.valuePath}}" data-kind="bool" bindchange="handleInput">
+    <checkbox-group class="a2ui-checkbox-group" data-id="{{i.id}}" data-path="{{i.valuePath}}" data-kind="bool" bindchange="handleInput">
       <label class="a2ui-checkbox">
         <checkbox checked="{{i.checked}}" value="true" disabled="{{i.disabled}}" />
         <text class="a2ui-checkbox-label">{{i.label || i.text}}</text>
@@ -121,7 +121,7 @@ function generateTemplate(level, maxLevel = 4) {
   <!-- 11. Slider -->
   <view wx:elif="{{i.component === 'Slider'}}" class="a2ui-slider-wrap">
     <text wx:if="{{i.label}}" class="a2ui-label">{{i.label}}</text>
-    <slider min="{{i.min}}" max="{{i.max}}" step="{{i.step}}" value="{{i.value}}" show-value="true" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handleInput" />
+    <slider class="a2ui-slider" min="{{i.min}}" max="{{i.max}}" step="{{i.step}}" value="{{i.value}}" show-value="true" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handleInput" />
   </view>
 
   <!-- 12. ChoicePicker (CR-2 & L1/L2: 支持选项数组、单选/多选 Chips 与下拉选择器) -->
