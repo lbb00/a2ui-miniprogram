@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1
+
+### Patch Changes
+
+- Release 0.1.1: documentation internationalization, clean DevTools preview screenshot, and OIDC Trusted Publishing support.
+
 All notable changes to **a2ui-miniprogram** will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
