@@ -3,7 +3,7 @@
   "compileType": "miniprogram",
   "projectname": "a2ui-miniprogram",
   "description": "WeChat MiniProgram Renderer for A2UI Protocol",
-  "appid": "wx7377cdca54b98141",
+  "appid": "touristappid",
   "libVersion": "2.14.0",
   "setting": {
     "es6": true,

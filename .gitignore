@@ -12,4 +12,5 @@ scratch/
 scratchpad/
 .claude/
 artifacts/
+project.private.config.json
 .system_generated/
