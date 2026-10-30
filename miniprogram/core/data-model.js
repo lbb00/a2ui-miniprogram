@@ -486,6 +486,15 @@ function isSafeRegex(pattern) {
               stack[stack.length - 1].lastWasDelimiter = false;
             }
           }
+        } else {
+          const count = Number(bc);
+          if (!isNaN(count) && count > 5) {
+            if (stack.length > 0) {
+              stack[stack.length - 1].hasUnboundedQuantifier = true;
+              stack[stack.length - 1].seenQuantifier = true;
+              stack[stack.length - 1].lastWasDelimiter = false;
+            }
+          }
         }
         i = braceEnd;
       }
@@ -517,6 +526,11 @@ function isSafeRegex(pattern) {
             if (bc.includes(',')) {
               const parts = bc.split(',');
               if (parts[1].trim() === '' || Number(parts[1].trim()) > 5) {
+                isOuterUnbounded = true;
+              }
+            } else {
+              const count = Number(bc);
+              if (!isNaN(count) && count > 5) {
                 isOuterUnbounded = true;
               }
             }

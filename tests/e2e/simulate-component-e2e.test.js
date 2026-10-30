@@ -73,7 +73,7 @@ async function runSimulateE2E() {
   const simulate = require('miniprogram-simulate');
   const { A2UIEngine } = require('../../miniprogram/core/engine');
   const compPath = path.resolve(__dirname, '../../miniprogram/components/a2ui-surface/a2ui-surface');
-  const compId = simulate.load(compPath);
+  const compId = simulate.load(compPath, { rootPath: path.resolve(__dirname, '../../miniprogram') });
 
   try {
     // ----------------------------------------------------------------

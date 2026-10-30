@@ -364,6 +364,7 @@ class A2UIEngine {
       tree = this.getRenderTree(surfaceId);
     } catch (err) {
       console.error(`[A2UI] Failed to build render tree for surface '${surfaceId}':`, err);
+      this.emitError(surfaceId, ErrorCodes.EXECUTION_ERROR, '/', err.message || String(err));
     }
 
     for (const listener of this.listeners) {

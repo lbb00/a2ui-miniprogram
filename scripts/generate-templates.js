@@ -30,8 +30,8 @@ function generateTemplate(level, maxLevel = 4) {
     <view 
       wx:for="{{i.children}}" 
       wx:key="id" 
-      class="a2ui-row-item {{item.weight !== undefined || item.component === 'Column' ? 'a2ui-item-flex' : 'a2ui-item-own'}}" 
-      style="{{item.flexStyle ? item.flexStyle : (item.weight !== undefined ? 'flex: ' + item.weight + ' 1 0%; min-width: 0;' : 'flex: 0 0 auto;')}}"
+      class="a2ui-row-item {{(item.weight != null && item.weight !== '') || item.component === 'Column' ? 'a2ui-item-flex' : 'a2ui-item-own'}}" 
+      style="{{item.flexStyle ? item.flexStyle : ((item.weight != null && item.weight !== '') ? 'flex: ' + item.weight + ' 1 0%; min-width: 0;' : 'flex: 0 0 auto;')}}"
     >
       ${childInvocation}
     </view>
@@ -152,7 +152,7 @@ function generateTemplate(level, maxLevel = 4) {
       </checkbox-group>
     </block>
     <!-- 3. Default Selector Picker single selection -->
-    <picker wx:else mode="selector" range="{{i.options}}" range-key="label" value="{{i.selectedIndex !== undefined ? i.selectedIndex : 0}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handlePickerChange">
+    <picker wx:else mode="selector" range="{{i.options}}" range-key="label" value="{{i.selectedIndex != null && i.selectedIndex !== '' ? i.selectedIndex : 0}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handlePickerChange">
       <view class="a2ui-picker-box"><text>{{i.displayLabel || (i.options && i.options[i.selectedIndex] ? i.options[i.selectedIndex].label : (i.value || 'Please select'))}}</text></view>
     </picker>
   </view>
@@ -213,14 +213,14 @@ function generateTemplate(level, maxLevel = 4) {
         data-id="{{i.id}}" 
         data-uikey="{{i.uiKey}}"
         data-idx="{{index}}" 
-        class="a2ui-tab-item {{(uiState[i.uiKey] !== undefined ? uiState[i.uiKey] : i.activeTab) === index ? 'active' : ''}}" 
+        class="a2ui-tab-item {{(uiState[i.uiKey] != null ? uiState[i.uiKey] : i.activeTab) === index ? 'active' : ''}}" 
         bindtap="onTabTap"
       >
         <text>{{t.title}}</text>
       </view>
     </view>
     <block wx:for="{{i.children}}" wx:key="id">
-      <view wx:if="{{(uiState[i.uiKey] !== undefined ? uiState[i.uiKey] : i.activeTab) === index}}">
+      <view wx:if="{{(uiState[i.uiKey] != null ? uiState[i.uiKey] : i.activeTab) === index}}">
         ${childInvocation}
       </view>
     </block>

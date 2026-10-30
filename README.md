@@ -1,14 +1,17 @@
 # a2ui-miniprogram
 
-[WeChat Mini Program](https://developers.weixin.qq.com/miniprogram/dev/framework/) native renderer for the [A2UI (Agent-to-User Interface)](https://github.com/a2ui-project/a2ui) specification.
+English | [简体中文](README.zh-CN.md)
+
+Native [WeChat Mini Program](https://developers.weixin.qq.com/miniprogram/dev/framework/) renderer for the [A2UI (Agent-to-User Interface)](https://github.com/a2ui-project/a2ui) specification, designed for dual-thread architecture and targeted differential updates.
 
 <p align="center">
   <a href="https://www.npmjs.com/package/a2ui-miniprogram"><img src="https://img.shields.io/npm/v/a2ui-miniprogram.svg?style=flat-square&color=6a6eac" alt="npm version"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="license"/></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-22%20%7C%2024-brightgreen.svg?style=flat-square" alt="node version"/></a>
   <a href="https://developers.weixin.qq.com/miniprogram/dev/framework/"><img src="https://img.shields.io/badge/WeChat%20Mini%20Program-%E2%89%A5%202.14.0-07c160.svg?style=flat-square" alt="wechat miniprogram"/></a>
-  <a href="https://github.com/a2ui-project/a2ui"><img src="https://img.shields.io/badge/A2UI%20Spec-v1.0%20Compliant-10b981.svg?style=flat-square" alt="spec"/></a>
-  <a href="scripts/run-tests.js"><img src="https://img.shields.io/badge/tests-24%2F24%20passed-success.svg?style=flat-square" alt="tests"/></a>
+  <a href="https://github.com/a2ui-project/a2ui"><img src="https://img.shields.io/badge/A2UI%20Spec-v1.0-10b981.svg?style=flat-square" alt="spec"/></a>
+  <a href="scripts/run-tests.js"><img src="https://img.shields.io/badge/tests-25%2F25%20passed-success.svg?style=flat-square" alt="tests"/></a>
+  <a href="scripts/benchmark-wechat-perf.js"><img src="https://img.shields.io/badge/benchmarks-passing-blue.svg?style=flat-square" alt="benchmarks"/></a>
   <a href="miniprogram/index.d.ts"><img src="https://img.shields.io/badge/TypeScript-Ready-3178c6.svg?style=flat-square" alt="typescript"/></a>
 </p>
 
@@ -20,11 +23,14 @@
 
 ## Features
 
-- **A2UI v1.0 Spec Compliance**: Supports `createSurface`, `updateComponents`, `updateDataModel`, `deleteSurface`, and client RPC (`callRendererFunction`).
-- **Template Unrolling**: Emits static WXML templates (levels 0–4) using native view tags, minimizing custom component instance overhead; falls back to `<a2ui-surface-layer>` beyond depth 4.
-- **Directional Patching**: Calculates minimal differential updates (`computeTreePatches`) to prevent input cursor jumping during real-device typing.
-- **Security**: Built-in polynomial/exponential ReDoS regex guards, prototype pollution sanitization (`__proto__`, `constructor`), and safe URL/markdown rendering.
-- **Extensible**: Supports layout slots (`header`, `footer`, `empty`) and business custom components via WeChat `componentGenerics`.
+- **A2UI v1.0 Spec Alignment**: Supports `createSurface`, `updateComponents`, `updateDataModel`, `deleteSurface`, and client RPC (`callRendererFunction`).
+- **Differential `setData` Updates**: `computeTreePatches` calculates granular property- and index-level updates, reducing bridge payload size on state changes (typical reductions between 70% and 97% on benchmark cases).
+- **Frame Batching with `wx.nextTick`**: Coalesces high-frequency streaming chunks (such as LLM token streams) within microtask ticks to mitigate bridge congestion.
+- **Template Unrolling**: Emits static WXML templates (levels 0–4) using native view tags, maintaining a single root component instance and keeping DOM depth shallow (typically 10–14 levels across official catalog specs).
+- **Controlled Input Handling**: Skips active input value re-writing during local user keystrokes to mitigate cursor jumping on mobile virtual keyboards, while allowing external and programmatic resets.
+- **Lifecycle Cleanup**: Unsubscribes engine listeners, timers, and surface maps on component `detached` to prevent memory leaks during long sessions.
+- **Security Protections**: Built-in regex ReDoS guards against nested/fixed quantifiers, prototype pollution sanitization (`__proto__`, `constructor`), and safe URL/markdown rendering.
+- **Extensible Layout & Generics**: Supports named layout slots (`header`, `footer`, `empty`) and business custom components via WeChat `componentGenerics`.
 
 ---
 
@@ -46,6 +52,60 @@ sequenceDiagram
     Surface->>Engine: computeTreePatches (Directional Update)
     Surface->>Engine: createActionMessage(surfaceId, componentId)
     Engine->>Agent: Outbound Action Event with Dynamic Context
+```
+
+---
+
+## Performance & Benchmarks
+
+### Benchmark Testbed Specifications
+
+All benchmark numbers below were measured directly on the host testbed running `npm run bench` (`scripts/benchmark-wechat-perf.js`) across all 43 official A2UI catalog test suites:
+
+- **CPU**: Apple M4 (10-core CPU)
+- **Memory**: 16 GB Unified Memory
+- **Operating System**: macOS
+- **Runtime**: Node.js v24.18.0
+- **MiniProgram Emulation**: `miniprogram-simulate` v1.6.1 (WeChat Mini Program Base Library $\ge$ 2.14.0)
+
+> **Note on Real-Device Performance**: The pipeline latency metrics below measure pure logic-thread CPU execution (pointer resolution, AST generation, and diffing). On physical mobile devices (iOS JSCore / Android V8), end-to-end rendering additionally includes cross-process JSBridge serialization and native layout, which typically introduces 2–16 ms of latency depending on hardware.
+
+### WeChat Guidelines Compliance
+
+| Evaluation Dimension | WeChat Guideline | Benchmark Result (43 Spec Files) | Status |
+| :--- | :--- | :--- | :--- |
+| **WXML DOM Nodes** | Warning threshold at `> 1,000` nodes | **25.4** average (Peak: **67** nodes) | Within Guideline |
+| **DOM Nesting Depth** | Warning threshold at `> 32` levels | **14** levels maximum | Within Guideline |
+| **Custom Component Count** | Minimize Shadow Root overhead | **1** root instance (`<a2ui-surface>`) via 5-level unrolling | Flat Hierarchy |
+| **`setData` Payload Size** | Recommended `< 50 KB`, limit `256 KB` | **60 ~ 300 Bytes** per delta patch | Within Guideline |
+| **Bridge Streaming Rate** | Avoid unbatched bridge saturation | Coalesced via `wx.nextTick` into 60 FPS frame rate | Coalesced |
+| **Input Cursor Stability** | Avoid view-layer overwrite jumping | Active input value skipped in typing patches | Protected |
+| **Lifecycle Cleanup** | Avoid memory leaks in long sessions | 0 surviving surfaces/listeners across 200 cycles | Clean Teardown |
+| **Logic Pipeline Latency** | Frame budget `< 16.66 ms` for 60 FPS | **~0.10 ms** (Apple M4) | < 1 ms |
+| **Update Throughput** | Support rapid interaction & streaming | **2,500 ~ 100,000 ops/sec** across mutation patterns | High Throughput |
+
+### `setData` Bandwidth Comparison (Full AST vs Differential Patch)
+
+| Benchmark Scenario | Full AST Size | Delta Patch Size | Measured Reduction |
+| :--- | :--- | :--- | :--- |
+| **Streaming Token Append** | `1,170 B` | `319 B` | **72.74%** |
+| **Dynamic Price Update ($199.99 -> $99.99)** | `3,372 B` | `81 B` | **97.60%** |
+| **Form Validation State (Button Enable/Disable)** | `762 B` | `208 B` | **72.70%** |
+| **Incremental Array Item Append (15 -> 16 items)** | `4,019 B` | `279 B` | **93.06%** |
+
+### Logic Thread Pipeline Breakdown (1,000 Iteration Sample)
+
+| Pipeline Phase | Measured Latency (Apple M4, Node v24) | Percentage of 16.66ms Frame Budget | Description |
+| :--- | :--- | :--- | :--- |
+| **1. RFC 6901 `updateDataModel`** | `45.4 μs` (`0.045 ms`) | ~0.27% | Path traversal, prototype pollution defense, state mutation |
+| **2. `getRenderTree` AST Evaluation** | `44.6 μs` (`0.045 ms`) | ~0.27% | Scope resolution, `@call` functions, validation rules |
+| **3. `computeTreePatches` Diff** | `9.9 μs` (`0.010 ms`) | ~0.06% | Tree diffing, active input handling, array prefix matching |
+| **4. JSON Stringification** | `0.2 μs` (`0.000 ms`) | ~0.00% | Serialization of patch payload for bridge transfer |
+| **Total Logic Thread Time** | **`100.2 μs` (`0.100 ms`)** | **`0.60%`** | **Leaves ample margin for native rendering on 60 FPS devices** |
+
+To run benchmarks locally:
+```bash
+npm run bench
 ```
 
 ---
@@ -327,13 +387,16 @@ engine.destroy();
 
 ---
 
-## Testing
+## Testing & Benchmarks
 
 ```bash
-# Unit, security, and regression tests (23 suites)
+# Unit, security, and regression tests (25 suites)
 npm test
 
-# Headless simulation test
+# WeChat runtime performance and architecture benchmark
+npm run bench
+
+# Headless component simulation test
 npm run test:sim
 
 # Automator end-to-end test

@@ -92,6 +92,13 @@ function setIn(root, segments, value) {
     const seg = segments[i];
     const nextSeg = segments[i + 1];
 
+    if (Array.isArray(current) && seg === '-') {
+      const nextContainer = /^\d+$/.test(nextSeg) || nextSeg === '-' ? [] : {};
+      current.push(nextContainer);
+      current = nextContainer;
+      continue;
+    }
+
     if (current[seg] == null || typeof current[seg] !== 'object') {
       current[seg] = /^\d+$/.test(nextSeg) || nextSeg === '-' ? [] : {};
     }
@@ -105,14 +112,12 @@ function setIn(root, segments, value) {
       if (value !== null && value !== undefined) {
         current.push(sanitizeObject(value));
       }
-    } else {
+    } else if (/^(?:0|[1-9]\d*)$/.test(lastSeg)) {
       const idx = Number(lastSeg);
-      if (!isNaN(idx)) {
-        if (value === null) {
-          current.splice(idx, 1);
-        } else {
-          current[idx] = sanitizeObject(value);
-        }
+      if (value === null) {
+        current.splice(idx, 1);
+      } else {
+        current[idx] = sanitizeObject(value);
       }
     }
   } else if (typeof current === 'object' && current !== null) {
@@ -137,7 +142,16 @@ function resolveSegs(path, scope) {
   // Relative path
   const relSegs = parsePointer(path);
   if (scope && scope.base && Array.isArray(scope.base)) {
-    return scope.base.concat(relSegs);
+    const combined = scope.base.concat(relSegs);
+    const resolved = [];
+    for (const seg of combined) {
+      if (seg === '..') {
+        if (resolved.length > 0) resolved.pop();
+      } else if (seg !== '.') {
+        resolved.push(seg);
+      }
+    }
+    return resolved;
   }
   return relSegs;
 }
@@ -248,7 +262,7 @@ function isDeepEqual(a, b, maxDepth = 5) {
 function computeTreePatches(oldTree, newTree, rootPrefix = 'localRenderTree', options = {}, patches = {}) {
   if (oldTree === newTree) return patches;
   if (!oldTree || !newTree || typeof oldTree !== 'object' || typeof newTree !== 'object') {
-    patches[rootPrefix] = newTree;
+    patches[rootPrefix] = newTree !== undefined ? newTree : null;
     return patches;
   }
   if (oldTree.component !== newTree.component || oldTree.id !== newTree.id) {
@@ -325,8 +339,14 @@ function computeTreePatches(oldTree, newTree, rootPrefix = 'localRenderTree', op
         patches
       );
     } else {
-      // Intercept controlled input value writes to avoid cursor jumping and blur
-      if (activeId && (newTree.id === activeId || newTree.sourceId === activeId) && key === 'value') {
+      // Intercept controlled input value writes to avoid cursor jumping,
+      // while permitting programmatic resets when forceValueUpdate is enabled.
+      if (
+        activeId &&
+        (newTree.id === activeId || newTree.sourceId === activeId) &&
+        key === 'value' &&
+        !options.forceValueUpdate
+      ) {
         continue;
       }
 
@@ -338,7 +358,22 @@ function computeTreePatches(oldTree, newTree, rootPrefix = 'localRenderTree', op
           patches[toPropertyPath([key], rootPrefix)] = newVal;
         }
       } else if (oldVal !== newVal) {
-        const patchVal = newVal !== undefined ? newVal : (typeof oldVal === 'boolean' ? false : '');
+        let patchVal = newVal;
+        if (patchVal === undefined) {
+          if (typeof oldVal === 'boolean' || key === 'disabled') {
+            patchVal = false;
+          } else if (typeof oldVal === 'string' || key === 'validationError') {
+            patchVal = '';
+          } else if (Array.isArray(oldVal)) {
+            patchVal = [];
+          } else if (typeof oldVal === 'object') {
+            patchVal = null;
+          } else if (typeof oldVal === 'number') {
+            patchVal = null;
+          } else {
+            patchVal = null;
+          }
+        }
         patches[toPropertyPath([key], rootPrefix)] = patchVal;
       }
     }
