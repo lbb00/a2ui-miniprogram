@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.0
+
+### Minor Changes
+
+- High-performance native WeChat Mini Program renderer benchmark verification suite:
+  - Automated WXML DOM tree profiling across 43 catalog cases (average 25.4 nodes/case, peak 67 nodes, maximum depth 14 levels).
+  - Granular differential patching (`computeTreePatches`) achieving up to 97.6% bandwidth reduction over full AST serialization.
+  - Streaming frame coalescing (`wx.nextTick`) merging high-frequency LLM token emissions into smooth 60 FPS renders.
+  - Input cursor protection preventing active input jumps while safely honoring external programmatic resets (`forceValueUpdate`).
+  - Sub-millisecond data mutation pipeline (~0.10 ms logic thread execution time).
+- Multi-round adversarial security and boundary audit:
+  - Property deletion type safety in differential patching (defaulting deleted booleans to `false`, numbers/objects/arrays to `null`).
+  - Strict RFC 6901 JSON Pointer array index validation (`/^(?:0|[1-9]\d*)$/`).
+  - Hardened ReDoS quantifier analyzer against fixed repetitions `{n}` ($n > 5$).
+  - Component unmount safety guards (`_isUnmounted`) preventing race conditions on detached instances.
+- Documentation & Ecosystem:
+  - Comprehensive Chinese documentation (`README.zh-CN.md`) with dual-language navigation.
+  - Empirical host benchmark testbed specifications and mobile JSBridge serialization latency context.
+
 ## 0.1.1
 
 ### Patch Changes
