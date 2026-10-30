@@ -1,6 +1,6 @@
 # a2ui-miniprogram
 
-[English](README.md) | 简体中文
+[English](./) | 简体中文
 
 面向 [A2UI (Agent-to-User Interface)](https://github.com/a2ui-project/a2ui) 规范的高性能原生[微信小程序](https://developers.weixin.qq.com/miniprogram/dev/framework/)渲染器。专为移动端双线程架构、亚毫秒级状态更新与高压缩比 `setData` 通信量身打造。
 
