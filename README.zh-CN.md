@@ -58,15 +58,15 @@ sequenceDiagram
 
 ## 性能表现与微信运行时基准
 
-### 测试环境与评估方法
+### 基准测试测试机规格（软硬件支撑）
 
-以下基准数据基于运行 `npm run bench`（对应脚本 [`scripts/benchmark-wechat-perf.js`](file:///private/tmp/a2ui-miniprogram/scripts/benchmark-wechat-perf.js)），针对全部 43 个官方 A2UI 规范用例测得。
+下方所有基准测试数据均通过在本机执行 `npm run bench`（对应脚本 [`scripts/benchmark-wechat-perf.js`](file:///private/tmp/a2ui-miniprogram/scripts/benchmark-wechat-perf.js)）针对全量 43 个官方 A2UI 规范用例测得，对应测试机软硬件配置如下：
 
-- **处理器架构**：ARM64 / Apple Silicon (10 核) 与 Linux x86_64 (CI)
-- **操作系统**：macOS / Ubuntu Linux
-- **Node 环境**：Node.js v22.x / v24.x (V8 12.x)
-- **小程序基础库目标**：微信小程序基础库 $\ge$ 2.14.0
-- **组件仿真框架**：`miniprogram-simulate` v1.6.1（微信官方 Exparser 组件系统与模版编译仿真）
+- **处理器 (CPU)**：Apple M4（10 核 CPU）
+- **内存 (RAM)**：16 GB 统一内存
+- **操作系统 (OS)**：macOS
+- **运行环境 (Runtime)**：Node.js v24.18.0
+- **小程序仿真环境**：`miniprogram-simulate` v1.6.1（微信小程序基础库 $\ge$ 2.14.0）
 
 > **关于移动端真机耗时的说明**：下方列出的逻辑流水线耗时为逻辑线程内的纯 CPU 计算耗时（指针寻址、AST 重估与 Diff 计算）。在移动端真机（iOS JSCore / Android V8）上，端到端渲染还包含跨进程 JSBridge 序列化与原生排版通信开销（通常视手机芯片与系统负载在 2~16 ms 之间）。
 
@@ -81,7 +81,7 @@ sequenceDiagram
 | **通信桥流式调度** | 避免未合帧高频调用堵塞通信桥 | 基于 `wx.nextTick` 合帧至 60 FPS 帧率 | 已做合帧 |
 | **输入框光标稳定性** | 避免逻辑层回写冲刷导致光标跳动 | 敲键更新自动跳过当前激活输入框补丁 | 已做保护 |
 | **生命周期资源回收** | 避免长会话持续累积内存 | 200 轮循环后残留实例与监听器均为 0 | 清理正常 |
-| **逻辑流水线计算耗时** | 60 FPS 单帧预算为 `16.66 ms` | ARM64 下约 **0.10 ms** / 虚拟化 CI 上约 **0.50 ms** | < 1 ms |
+| **逻辑流水线计算耗时** | 60 FPS 单帧预算为 `16.66 ms` | 约 **0.10 ms**（Apple M4） | < 1 ms |
 | **更新处理吞吐量** | 支撑流式吐字与频繁交互 | 不同变异模式下约 **2,500 ~ 100,000 ops/sec** | 吞吐充裕 |
 
 ### `setData` 通信带宽优化（全量 AST vs 差量 Patch）
@@ -95,7 +95,7 @@ sequenceDiagram
 
 ### 单次数据变动逻辑流水线耗时分解（1,000 次采样均值）
 
-| 流水线执行阶段 | 实测耗时（ARM64） | 占 16.66ms 帧预算比例 | 说明 |
+| 流水线执行阶段 | 实测耗时（Apple M4, Node v24） | 占 16.66ms 帧预算比例 | 说明 |
 | :--- | :--- | :--- | :--- |
 | **1. RFC 6901 `updateDataModel`** | `45.4 μs` (`0.045 ms`) | ~0.27% | 路径寻址、原型链过滤与数据写入 |
 | **2. `getRenderTree` AST 重算** | `44.6 μs` (`0.045 ms`) | ~0.27% | 动态作用域解析、`@call` 函数求值、校验规则链 |
