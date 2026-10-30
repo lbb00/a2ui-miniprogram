@@ -1,12 +1,12 @@
 /* ==========================================================================
-   A2UI 微信小程序流式渲染器 - 演示 Demo 页面专用样式
-   引入官方画廊 Slate Lavender 紫色演示主题，配合 iOS 极简外壳呈现 36 个官方用例
+   A2UI WeChat MiniProgram Streaming Renderer - Demo Page Styles
+   Slate Lavender theme aligned with official A2UI catalog gallery.
    ========================================================================== */
 
 @import "../../themes/theme-purple.wxss";
 
 page {
-  background-color: #ebebf2; /* 官方 A2UI 画廊钦定雾霾浅灰紫底色 */
+  background-color: #ebebf2; /* Official A2UI gallery muted slate-gray purple */
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'PingFang SC', 'Helvetica Neue', Arial, sans-serif;
   color: #1a1a24;
@@ -23,7 +23,7 @@ page {
   background-color: #ebebf2;
 }
 
-/* ================= 顶部 iOS 原生质感导航面板 ================= */
+/* ================= Top iOS Native Nav Panel ================= */
 .top-nav-panel {
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(24px) saturate(180%);
@@ -114,7 +114,7 @@ page {
   font-size: 20rpx;
   font-weight: 700;
   color: #ffffff;
-  background: #6a6eac; /* 官方 A2UI 标志 Slate Lavender 紫色 */
+  background: #6a6eac; /* Official A2UI Slate Lavender theme color */
   padding: 4rpx 14rpx;
   border-radius: 20rpx;
   letter-spacing: 0.4rpx;
@@ -146,7 +146,7 @@ page {
   flex-shrink: 0;
 }
 
-/* ================= 控制分段按钮条 (2字极简克制) ================= */
+/* ================= Segmented Control Buttons ================= */
 .stream-control-row {
   display: flex;
   align-items: center;
@@ -249,7 +249,7 @@ page {
   line-height: 1;
 }
 
-/* ================= 顶栏内嵌状态条 (指标纯粹客观，无冗余说明) ================= */
+/* ================= Inline Status Bar ================= */
 .nav-status-bar {
   display: flex;
   align-items: center;
@@ -329,7 +329,7 @@ page {
   mask-repeat: no-repeat;
 }
 
-/* 进度细线 */
+/* Progress Track */
 .stream-progress-track {
   position: absolute;
   bottom: 0;
@@ -345,7 +345,7 @@ page {
   transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* ================= 核心舞台 (100% 视口无遮挡) ================= */
+/* ================= Core Stage ================= */
 .stage-scroll-view {
   flex: 1;
   width: 100%;
@@ -359,7 +359,7 @@ page {
   min-height: 100%;
 }
 
-/* ================= 优雅抽屉：iOS 半屏模态面板 ================= */
+/* ================= iOS Half-Screen Modal Drawer ================= */
 .debug-drawer-mask {
   position: fixed;
   top: 0;
@@ -490,7 +490,7 @@ page {
   mask-repeat: no-repeat;
 }
 
-/* 分段切换 */
+/* Segmented Tabs */
 .drawer-tabs-row {
   display: flex;
   background: #f2f2f7;

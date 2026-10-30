@@ -1,24 +1,24 @@
 const assert = require('assert');
 
-console.log('--- [1] 验证 a2ui-miniprogram 根 index.js 模块导出 ---');
+console.log('--- [1] Verify root index.js module exports ---');
 const rootModule = require('../index');
-assert(rootModule.A2UIEngine, '根模块应导出 A2UIEngine');
-assert(rootModule.resolveValue, '根模块应导出 resolveValue');
-assert(rootModule.resolveDeep, '根模块应导出 resolveDeep');
-assert(rootModule.getValueByPath, '根模块应导出 getValueByPath');
-assert(rootModule.hasMarkdown, '根模块应导出 hasMarkdown');
-assert(rootModule.parseMarkdown, '根模块应导出 parseMarkdown');
-console.log('✓ 根模块导出验证通过');
+assert(rootModule.A2UIEngine, 'Root module must export A2UIEngine');
+assert(rootModule.resolveValue, 'Root module must export resolveValue');
+assert(rootModule.resolveDeep, 'Root module must export resolveDeep');
+assert(rootModule.getValueByPath, 'Root module must export getValueByPath');
+assert(rootModule.hasMarkdown, 'Root module must export hasMarkdown');
+assert(rootModule.parseMarkdown, 'Root module must export parseMarkdown');
+console.log('✓ Root module exports verified');
 
-console.log('\n--- [2] 验证 a2ui-miniprogram 小程序目录 (miniprogram/index.js) 模块导出 ---');
+console.log('\n--- [2] Verify miniprogram index.js module exports ---');
 const mpModule = require('../miniprogram/index');
-assert(mpModule.A2UIEngine, '小程序模块应导出 A2UIEngine');
-assert(mpModule.resolveValue, '小程序模块应导出 resolveValue');
-assert(mpModule.hasMarkdown, '小程序模块应导出 hasMarkdown');
-assert(mpModule.parseMarkdown, '小程序模块应导出 parseMarkdown');
-console.log('✓ 小程序模块导出验证通过');
+assert(mpModule.A2UIEngine, 'MiniProgram module must export A2UIEngine');
+assert(mpModule.resolveValue, 'MiniProgram module must export resolveValue');
+assert(mpModule.hasMarkdown, 'MiniProgram module must export hasMarkdown');
+assert(mpModule.parseMarkdown, 'MiniProgram module must export parseMarkdown');
+console.log('✓ MiniProgram module exports verified');
 
-console.log('\n--- [3] 验证导出的 A2UIEngine 可实例化并正常推导渲染树 ---');
+console.log('\n--- [3] Verify exported A2UIEngine instantiation & tree derivation ---');
 const engine = new rootModule.A2UIEngine();
 engine.process([
   {
@@ -48,10 +48,10 @@ engine.process([
 ]);
 
 const tree = engine.getRenderTree('test_surface');
-assert(tree, '应成功生成渲染树');
+assert(tree, 'Render tree should be generated');
 assert.strictEqual(tree.component, 'Card');
 assert.strictEqual(tree.children[0].component, 'Button');
 assert.strictEqual(tree.children[0].text, 'Module Export Test');
-console.log('✓ 导出的 A2UIEngine 渲染树验证通过: Card -> Button');
+console.log('✓ Exported A2UIEngine render tree verified: Card -> Button');
 
-console.log('\n🎉 a2ui-miniprogram 微信小程序模块导出健全性测试 100% 通过！\n');
+console.log('\n🎉 Module export sanity tests passed (100%)\n');

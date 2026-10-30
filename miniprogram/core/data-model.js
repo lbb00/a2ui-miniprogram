@@ -1,20 +1,20 @@
 /**
  * A2UI Data Model & Path Resolver
- * 遵循 A2UI v1.0 规范，解析 @path 寻址（支持绝对路径与局部作用域相对路径）
- * 支持 15 大内置函数、TR35 日期格式化、单遍安全插值、原型链防护
+ * Adheres to A2UI v1.0 specification, resolves @path addressing (absolute and local scoped paths)
+ * Supports 15 built-in functions, TR35 date formatting, single-pass safe interpolation, prototype pollution protection
  */
 
 const { parsePointer, getIn, resolveSegs } = require('./pointer');
 
 /**
- * 根据 JSON Pointer (RFC 6901) 解析数据路径，如 "/name", "/items/0/title"
+ * Resolves data path according to JSON Pointer (RFC 6901), e.g. "/name", "/items/0/title"
  */
 function getValueByPath(dataModel, path, scope = null) {
   if (path == null) return undefined;
   if (path === '/') return dataModel;
   if (typeof path !== 'string') return undefined;
 
-  // 1. 空路径 @path: "" 对应当前项自身 (CR-N5)
+  // 1. Empty path @path: "" corresponds to current item itself (CR-N5)
   if (path === '') {
     if (scope && scope.base && Array.isArray(scope.base)) {
       return getIn(dataModel, scope.base);
@@ -25,30 +25,30 @@ function getValueByPath(dataModel, path, scope = null) {
     return dataModel;
   }
 
-  // 2. 如果是不以 / 开头的相对路径，优先从当前局部作用域取值
+  // 2. Relative path not starting with / prioritizes local scope
   if (!path.startsWith('/')) {
-    // 现代作用域对象: { base: [...], index: number, data?: object }
+    // Modern scope object: { base: [...], index: number, data?: object }
     if (scope && scope.base && Array.isArray(scope.base)) {
       const fullSegs = resolveSegs(path, scope);
       return getIn(dataModel, fullSegs);
     }
-    // 传统普通对象作用域: { title: '...', count: 5 }
+    // Traditional plain object scope: { title: '...', count: 5 }
     if (scope && typeof scope === 'object') {
       const segs = parsePointer(path);
       const val = getIn(scope, segs);
       if (val !== undefined) return val;
-      // 严格符合规范：相对路径未在局部作用域命中时，不回退到根模型
+      // Specification compliance: relative path returns undefined when not found in scope (does not fall back to root)
       return undefined;
     }
   }
 
-  // 3. 绝对路径（或无 scope 时的路径）从根模型寻址
+  // 3. Absolute path (or path without scope) resolved from root data model
   const segments = parsePointer(path);
   return getIn(dataModel, segments);
 }
 
 /**
- * 递归求解对象或数组中的所有 @path 和表达式（支持 scope 局部作用域与防环深度保护）
+ * Recursively resolves all @path and expressions in object or array (supports scope and circular reference protection)
  */
 function resolveDeep(target, dataModel, scope = null, depth = 0, seen = new WeakSet()) {
   if (target == null) return target;
@@ -56,7 +56,7 @@ function resolveDeep(target, dataModel, scope = null, depth = 0, seen = new Weak
     return resolveValue(target, dataModel, scope);
   }
 
-  // 防御深度超限与循环引用崩溃 (SEC-H2)
+  // Protection against depth overflow and circular reference crashes (SEC-H2)
   if (depth > 32 || seen.has(target)) {
     return target;
   }
@@ -79,7 +79,7 @@ function resolveDeep(target, dataModel, scope = null, depth = 0, seen = new Weak
 }
 
 /**
- * 格式化输出为字符串
+ * Format value to string
  */
 function stringifyValue(val) {
   if (val == null) return '';
@@ -88,7 +88,7 @@ function stringifyValue(val) {
 }
 
 /**
- * 寻找与 `${` 配对的闭合花括号 `}`，跳过字符串与嵌套括号
+ * Finds closing brace '}' matching '${', skipping strings and nested braces
  */
 function findCloseBrace(str, startPos) {
   let depth = 1;
@@ -120,7 +120,7 @@ function findCloseBrace(str, startPos) {
 }
 
 /**
- * 解析形如 `value: ${/price}, currency: EUR` 的命名参数字符串
+ * Parses named argument string like `value: ${/price}, currency: EUR`
  */
 function parseNamedArgs(str, dataModel, scope) {
   const args = {};
@@ -133,7 +133,7 @@ function parseNamedArgs(str, dataModel, scope) {
     const ch = str[i];
     if (inQuote) {
       if (ch === inQuote) {
-        // 奇偶反斜杠校验，精准识别转义反斜杠 (SEC-M3)
+        // Parity check for backslashes to accurately identify escaped backslashes (SEC-M3)
         let bsCount = 0;
         let j = i - 1;
         while (j >= 0 && str[j] === '\\') {
@@ -164,13 +164,13 @@ function parseNamedArgs(str, dataModel, scope) {
     const colonIdx = part.indexOf(':');
     if (colonIdx > 0) {
       const k = part.slice(0, colonIdx).trim();
-      // 原型链污染过滤 (SEC-M3)
+      // Prototype pollution filter (SEC-M3)
       if (k === '__proto__' || k === 'prototype' || k === 'constructor') {
         continue;
       }
       let rawV = part.slice(colonIdx + 1).trim();
 
-      // 引号字符串 (支持 \" 与 \\ 转义还原)
+      // Quoted string (supports \" and \\ unescaping)
       if (
         (rawV.startsWith('"') && rawV.endsWith('"')) ||
         (rawV.startsWith("'") && rawV.endsWith("'"))
@@ -178,7 +178,7 @@ function parseNamedArgs(str, dataModel, scope) {
         const q = rawV[0];
         args[k] = rawV.slice(1, -1).replace(new RegExp(`\\\\([${q}\\\\])`, 'g'), '$1');
       } else if (rawV.startsWith('${') && rawV.endsWith('}')) {
-        // 嵌套表达式
+        // Nested expression
         const innerExpr = rawV.slice(2, -1).trim();
         args[k] = evalExpression(innerExpr, dataModel, scope);
       } else if (!isNaN(Number(rawV)) && rawV !== '') {
@@ -188,18 +188,18 @@ function parseNamedArgs(str, dataModel, scope) {
       } else if (rawV === 'false') {
         args[k] = false;
       } else if (rawV.match(/^([@a-zA-Z0-9_]+)\((.*)\)$/s)) {
-        // 嵌套函数调用 (CR-N9b)
+        // Nested function call (CR-N9b)
         args[k] = evalExpression(rawV, dataModel, scope);
       } else if (rawV.startsWith('/')) {
-        // 绝对路径引用
+        // Absolute path reference
         args[k] = getValueByPath(dataModel, rawV, scope);
       } else {
-        // 相对路径优先，若不存在则作为字符串常量 (如 currency: EUR)
+        // Relative path preferred, otherwise treated as string literal (e.g. currency: EUR)
         const pathVal = getValueByPath(dataModel, rawV, scope);
         args[k] = pathVal !== undefined ? pathVal : rawV;
       }
     } else if (parts.length === 1) {
-      // 缺省单位置参数自动映射为 'value' (如 not(/flag) 或 required(/name))
+      // Default single positional argument automatically mapped to 'value' (e.g. not(/flag) or required(/name))
       const rawV = part.trim();
       if (
         (rawV.startsWith('"') && rawV.endsWith('"')) ||
@@ -231,13 +231,13 @@ function parseNamedArgs(str, dataModel, scope) {
 }
 
 /**
- * 求解单个表达式（路径或函数调用）
+ * Evaluates single expression (path or function call)
  */
 function evalExpression(expr, dataModel, scope) {
   const trimmed = expr.trim();
   if (!trimmed) return '';
 
-  // 1. 函数调用: fnName(args...)
+  // 1. Function call: fnName(args...)
   const fnMatch = trimmed.match(/^([@a-zA-Z0-9_]+)\((.*)\)$/s);
   if (fnMatch) {
     const fnName = fnMatch[1];
@@ -246,24 +246,24 @@ function evalExpression(expr, dataModel, scope) {
     return evaluateFunction(fnName, parsedArgs, dataModel, scope);
   }
 
-  // 2. 路径求值
+  // 2. Path evaluation
   return getValueByPath(dataModel, trimmed, scope);
 }
 
 /**
- * 单遍扫描安全模板插值（防御二次执行注入漏洞，支持 \${ 转义）
+ * Single-pass safe template interpolation (prevents secondary injection, supports \${ escaping)
  */
 function interpolate(str, dataModel, scope) {
   let out = '';
   for (let i = 0; i < str.length; ) {
-    // 1. 支持转义: \${ -> ${
+    // 1. Supports escaping: \${ -> ${
     if (str[i] === '\\' && str.startsWith('${', i + 1)) {
       out += '${';
       i += 3;
       continue;
     }
 
-    // 2. 匹配 ${...}
+    // 2. Match ${...}
     if (str.startsWith('${', i)) {
       const closeIdx = findCloseBrace(str, i + 2);
       if (closeIdx < 0) {
@@ -283,23 +283,24 @@ function interpolate(str, dataModel, scope) {
 }
 
 /**
- * 解析 A2UI 属性值，支持静态常量、{"@path": "xxx"} 引用、以及基础函数调用
+ * Resolve A2UI property value supporting constants, {"@path": "xxx"} pointer references, and functions
  */
 function resolveValue(val, dataModel, scope = null) {
   if (val == null) return val;
 
-  // 1. 路径对象: {"@path": "title"} 或 {"@path": "/items/0"} 或 {"@path": ""}
-  if (typeof val === 'object' && '@path' in val) {
-    const resolved = getValueByPath(dataModel, val['@path'], scope);
+  // 1. Path pointer object: {"@path": "title"}, {"path": "title"} or {"@path": ""}
+  if (typeof val === 'object' && ('@path' in val || 'path' in val)) {
+    const rawPath = val['@path'] !== undefined ? val['@path'] : val.path;
+    const resolved = getValueByPath(dataModel, rawPath, scope);
     return resolved !== undefined ? resolved : '';
   }
 
-  // 2. 函数调用对象: {"@call": "formatCurrency", "args": {...}}
+  // 2. Function call object: {"@call": "formatCurrency", "args": {...}}
   if (typeof val === 'object' && '@call' in val) {
     return evaluateFunction(val['@call'], val.args, dataModel, scope);
   }
 
-  // 3. 字符串内部模板替换: 单遍扫描，防止数据再次触发注入
+  // 3. String template interpolation: single pass scan to prevent double injection
   if (typeof val === 'string' && val.includes('${')) {
     return interpolate(val, dataModel, scope);
   }
@@ -308,7 +309,7 @@ function resolveValue(val, dataModel, scope = null) {
 }
 
 /**
- * Unicode TR35 模式日期格式化 (支持字面量引号、EEE、yyy、y 等，CR-N8)
+ * Unicode TR35 pattern date formatting (supports literal quotes, EEE, yyy, y, etc., CR-N8)
  */
 function formatTR35Date(d, pattern) {
   if (isNaN(d.getTime())) return '';
@@ -327,7 +328,7 @@ function formatTR35Date(d, pattern) {
   const seconds = d.getSeconds();
   const ampm = hours24 < 12 ? 'AM' : 'PM';
 
-  // 优先保留单引号包裹的字面量，支持 '' 转义单引号，如 'o''clock' -> o'clock
+  // Preserve single-quoted literals first, supports '' escaping for single quote, e.g. 'o''clock' -> o'clock
   const literals = [];
   let s = pattern.replace(/'((?:''|[^'])*)'/g, (_, lit) => {
     literals.push(lit.replace(/''/g, "'"));
@@ -362,49 +363,49 @@ function formatTR35Date(d, pattern) {
   const re = /(yyyy|yyy|yy|y|MMMM|MMM|MM|M|EEEE|EEE|E|dd|d|HH|H|hh|h|mm|m|ss|s|a)/g;
   s = s.replace(re, (m) => (tokens[m] !== undefined ? tokens[m] : m));
 
-  // 恢复字面量
+  // Restore literals
   s = s.replace(/\x00(\d+)\x00/g, (_, idx) => literals[Number(idx)]);
   return s;
 }
 
 /**
- * 静态语法结构推演：验证正则表达式是否存在 ReDoS 灾难性指数回溯与多项式回溯风险
- * 精准拦截以下几类回溯爆炸结构，杜绝主线程卡死：
- * 1. 紧邻相邻量词：a++, a**, a+* 等
- * 2. 具有重叠集合的多重无界量化：\d*\w*\d*\w*, \w*\d*\w* 等
- * 3. 连续 3 个及以上无约束的 .* 且中间仅用普通单个字符连接 (如 .*a.*a.*a)
- * 4. 连续 3 次及以上重复完全相同的量化基元（如 \d+\d+\d+ 或 a+a+a+）
- * 5. 包含分支 (|) 或无界量词 (+, *, {n,}) 且外层受无界量词约束的复合结构：^((a)|(a))+$, ^(a|(a))+$, (a+)+ 等
- * 精准放行合法且安全的常见规则：
- * - 邮箱与域名递归：^[\w.+-]+@([\w-]+\.)+[\w-]{2,}$, ^([a-z0-9-]+\.)+[a-z]{2,}$
- * - 千分位数字：^\d{1,3}(,\d{3})*$
- * - 大小写词组：^([A-Z][a-z]+ ?)+$
- * - 十六进制颜色：^#([0-9a-fA-F]{3}){1,2}$
- * - 基础字符类与电话日期：^[a-z]+[0-9]+$, ^.*@.*\..*$, ^[A-Z]{2}\d{6}$, ^(\+86)?1[3-9]\d{9}$
+ * Static syntax analysis: verifies whether regex has catastrophic exponential or polynomial backtracking (ReDoS) risks.
+ * Intercepts backtracking explosion structures to prevent thread blocking:
+ * 1. Adjacent quantifiers: a++, a**, a+* etc.
+ * 2. Multiple unbounded quantifications with overlapping sets: \d*\w*\d*\w*, \w*\d*\w* etc.
+ * 3. 3 or more unbounded .* separated only by single characters (e.g. .*a.*a.*a)
+ * 4. 3 or more identical quantified primitives repeated (e.g. \d+\d+\d+ or a+a+a+)
+ * 5. Nested unbounded quantifiers with alternation: ^((a)|(a))+$, ^(a|(a))+$, (a+)+ etc.
+ * Permits valid and safe standard patterns:
+ * - Email and domain recursion: ^[\w.+-]+@([\w-]+\.)+[\w-]{2,}$, ^([a-z0-9-]+\.)+[a-z]{2,}$
+ * - Thousands numbers: ^\d{1,3}(,\d{3})*$
+ * - Cased phrases: ^([A-Z][a-z]+ ?)+$
+ * - Hex colors: ^#([0-9a-fA-F]{3}){1,2}$
+ * - Basic character classes and phone/dates: ^[a-z]+[0-9]+$, ^.*@.*\..*$, ^[A-Z]{2}\d{6}$, ^(\+86)?1[3-9]\d{9}$
  */
 function isSafeRegex(pattern) {
   if (typeof pattern !== 'string' || pattern.length === 0 || pattern.length > 300) {
     return false;
   }
-  // 1. 紧邻相邻量词
+  // 1. Adjacent quantifiers
   if (/[+*]\s*[+*]/.test(pattern)) return false;
 
-  // 2. 具有重叠集合的多重无界量化 (如 \d*\w*\d*\w*, \w*\d*\w*)
+  // 2. Multiple unbounded quantifications with overlapping sets (e.g. \d*\w*\d*\w*, \w*\d*\w*)
   if (/(\\d|\\w)[*+][^\\^$]*(\\w|\\d)[*+][^\\^$]*(\\w|\\d)[*+]/.test(pattern)) {
     return false;
   }
 
-  // 3. 连续 3 个及以上无约束的 .* 且中间仅用普通单个字符连接 (如 .*a.*a.*a)
+  // 3. 3 or more unbounded .* separated only by single characters (e.g. .*a.*a.*a)
   if (/\.\*[^\\^$@,/:;.?#]+\.\*[^\\^$@,/:;.?#]+\.\*/.test(pattern)) {
     return false;
   }
 
-  // 4. 连续 3 次及以上重复完全相同的量化基元（如 \d+\d+\d+ 或 a+a+a+）
+  // 4. 3 or more identical quantified primitives repeated (e.g. \d+\d+\d+ or a+a+a+)
   if (/((\\[dswDSW]|\.|[a-zA-Z0-9])(\+|\*|\{[\d,]+\}))\s*(\1\s*){2,}/.test(pattern)) {
     return false;
   }
 
-  // 5. 语法分析：括号内存在 | 或无界嵌套量词，且括号后附带 +, *, {n,} 累积重复
+  // 5. Syntax analysis: group contains alternation | or unbounded nested quantifier with trailing +, *, {n,}
   const stack = [];
   for (let i = 0; i < pattern.length; i++) {
     const ch = pattern[i];
@@ -419,11 +420,11 @@ function isSafeRegex(pattern) {
       } else {
         if (stack.length > 0) stack[stack.length - 1].lastWasDelimiter = false;
       }
-      i++; // 跳过转义字符
+      i++; // Skip escape character
       continue;
     }
     if (ch === '[') {
-      // 遍历跳过字符类内部，严格验证字符类闭合
+      // Skip character class interior, verify character class closure
       let closed = false;
       while (i < pattern.length) {
         if (pattern[i] === '\\') i++;
@@ -433,7 +434,7 @@ function isSafeRegex(pattern) {
           break;
         }
       }
-      if (!closed) return false; // 字符类未闭合
+      if (!closed) return false; // Unclosed character class
       if (stack.length > 0) stack[stack.length - 1].lastWasDelimiter = false;
       continue;
     }
@@ -446,7 +447,7 @@ function isSafeRegex(pattern) {
         lastWasDelimiter: false,
         seenQuantifier: false,
       });
-      // 跳过非捕获组与断言前缀 (?:, ?=, ?!, ?<=, ?<!)，防止冒号等符号被误识别为分隔符
+      // Skip non-capturing groups and assertion prefixes (?:, ?=, ?!, ?<=, ?<!) to prevent false delimiter detection
       if (pattern[i + 1] === '?') {
         if (pattern.startsWith('?<=', i + 1) || pattern.startsWith('?<!', i + 1)) {
           i += 3;
@@ -500,7 +501,7 @@ function isSafeRegex(pattern) {
     }
     if (ch === ')') {
       const groupInfo = stack.pop();
-      if (!groupInfo) return false; // 括号未闭合
+      if (!groupInfo) return false; // Unclosed parenthesis
       if (groupInfo.lastWasDelimiter) {
         groupInfo.hasEndDelimiter = true;
       }
@@ -522,12 +523,12 @@ function isSafeRegex(pattern) {
           }
         }
         if (isOuterUnbounded) {
-          // 组内存在分支 (|)：如 ((a)|(a))+ 或 (a|a)+ -> 拦截！
+          // Group contains alternation (|): e.g. ((a)|(a))+ or (a|a)+ -> intercept!
           if (groupInfo.hasAlternation) {
             return false;
           }
-          // 组内存在内部无界量词，且组边界【缺乏定界符隔离】：如 (a+)+ 或 ([a-z]+)+ 或 ([a-z]+_[a-z]+)+ -> 拦截！
-          // 若组首或组尾具备定界符（如 ([\w-]+\.)+ 或 (,\d{3})+ 或 (\w+;)+），跨组迭代有强定界符隔离，放行！
+          // Group contains unbounded quantifier without boundary delimiter guard: e.g. (a+)+ or ([a-z]+)+ -> intercept!
+          // If group has leading/trailing delimiter guard (e.g. ([\w-]+\.)+ or (,\d{3})+), iteration is guarded, allow!
           const isBoundaryGuarded = groupInfo.hasStartDelimiter || groupInfo.hasEndDelimiter;
           if (groupInfo.hasUnboundedQuantifier && !isBoundaryGuarded) {
             return false;
@@ -549,18 +550,25 @@ function isSafeRegex(pattern) {
 }
 
 /**
- * 校验值或 ValidationResult 是否为真
+ * Safely converts value or ValidationResult to boolean
  */
 function toBool(v) {
-  if (v && typeof v === 'object' && 'valid' in v) {
+  if (v == null) return false;
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'string') {
+    const s = v.trim().toLowerCase();
+    if (s === 'false' || s === '0' || s === 'off' || s === 'no' || s === '') return false;
+    if (s === 'true' || s === '1' || s === 'on' || s === 'yes') return true;
+  }
+  if (typeof v === 'object' && 'valid' in v) {
     return Boolean(v.valid);
   }
   return Boolean(v);
 }
 
 /**
- * 国际化货币符号映射 (A2UI Basic Catalog 规范)
- * 支持 EUR -> €, GBP -> £, JPY/CNY -> ¥, INR -> ₹, CAD/AUD/USD -> $, KRW -> ₩ 等常见币种
+ * International currency symbol mapping (A2UI Basic Catalog Specification)
+ * Supports EUR -> €, GBP -> £, JPY/CNY -> ¥, INR -> ₹, CAD/AUD/USD -> $, KRW -> ₩, etc.
  */
 const CURRENCY_SYMBOLS = {
   USD: '$',
@@ -585,7 +593,7 @@ function getCurrencySymbol(currency) {
 }
 
 /**
- * formatCurrency 国际化货币格式化函数
+ * formatCurrency international currency formatting function
  */
 function formatCurrency(value, currency, decimals = 2, grouping = false) {
   const num = Number(value) || 0;
@@ -601,8 +609,8 @@ function formatCurrency(value, currency, decimals = 2, grouping = false) {
 }
 
 /**
- * 完整复数分支匹配算法 (A2UI Basic Catalog 规范)
- * 接收 value 与复数分支 (zero, one, two, few, many, other)，依据数字大小与分支动态匹配返回正确字符串
+ * Full plural branch matching algorithm (A2UI Basic Catalog Specification)
+ * Accepts value and plural forms (zero, one, two, few, many, other), returns matched string dynamically
  */
 function executePluralize(value, forms = {}, locale = 'en-US') {
   const num = Number(value) || 0;
@@ -622,12 +630,12 @@ function executePluralize(value, forms = {}, locale = 'en-US') {
     } catch (_) {}
   }
 
-  // 1. 若 CLDR / Intl 命中的分类在 forms 中有定义，直接使用
+  // 1. If CLDR / Intl matched category is defined in forms, use directly
   if (category && forms[category] !== undefined) {
     return forms[category];
   }
 
-  // 2. 针对 few / many 等分支进行数值范围与优先级兜底匹配（当 CLDR 规则未捕获但入参显式声明对应分支时）
+  // 2. Numeric range and fallback matching for few / many branches when not captured by CLDR rules
   if (category === 'other' || !category) {
     if (num >= 3 && num <= 10 && forms.few !== undefined && forms.other === undefined) {
       return forms.few;
@@ -637,7 +645,7 @@ function executePluralize(value, forms = {}, locale = 'en-US') {
     }
   }
 
-  // 3. other 分支兜底，若未提供 other 则尝试 one
+  // 3. Fallback to other, or try one if other is omitted
   if (forms.other !== undefined) {
     return forms.other;
   }
@@ -660,8 +668,8 @@ function resetMockState() {
 }
 
 /**
- * openUrl 规范与微信小程序平台降级体验
- * 严格限制必须为 HTTP/HTTPS 链接；在小程序平台下自动复制链接至剪贴板并通过友好 toast 提示
+ * openUrl specification and WeChat MiniProgram platform fallback
+ * Strictly restricted to HTTP/HTTPS URLs; on MiniProgram platform copies to clipboard and shows toast
  */
 function openUrl(url) {
   if (!url || typeof url !== 'string') {
@@ -669,12 +677,12 @@ function openUrl(url) {
   }
 
   const trimmed = url.trim();
-  // 规范严格限制：只允许 HTTP/HTTPS 协议
+  // Strictly restricted to HTTP/HTTPS protocol
   if (!/^https?:\/\//i.test(trimmed)) {
     return { success: false, error: 'Unsupported URL scheme: only HTTP/HTTPS are allowed' };
   }
 
-  // 1. 微信小程序环境：复制到剪贴板并通过 toast 友好提示
+  // 1. WeChat MiniProgram environment: copy to clipboard and notify via toast
   if (typeof wx !== 'undefined') {
     if (wx.setClipboardData) {
       wx.setClipboardData({
@@ -682,7 +690,7 @@ function openUrl(url) {
         success: () => {
           if (wx.showToast) {
             wx.showToast({
-              title: '链接已复制，请在浏览器中打开',
+              title: 'Link copied, please open in browser',
               icon: 'none',
               duration: 2500,
             });
@@ -691,30 +699,30 @@ function openUrl(url) {
       });
     } else if (wx.showToast) {
       wx.showToast({
-        title: '链接已复制，请在浏览器中打开',
+        title: 'Link copied, please open in browser',
         icon: 'none',
         duration: 2500,
       });
     }
     mockClipboardData = trimmed;
-    mockToast = { title: '链接已复制，请在浏览器中打开', icon: 'none' };
+    mockToast = { title: 'Link copied, please open in browser', icon: 'none' };
     return { success: true, url: trimmed, action: 'copied_to_clipboard' };
   }
 
-  // 2. 浏览器环境：新标签页安全打开
+  // 2. Browser environment: safe window.open
   if (typeof window !== 'undefined' && typeof window.open === 'function') {
     window.open(trimmed, '_blank', 'noopener,noreferrer');
     return { success: true, url: trimmed, action: 'window_open' };
   }
 
-  // 3. Node 仿真环境：记录剪贴板与友好 Toast
+  // 3. Node test environment fallback: record clipboard and toast
   mockClipboardData = trimmed;
-  mockToast = { title: '链接已复制，请在浏览器中打开', icon: 'none' };
+  mockToast = { title: 'Link copied, please open in browser', icon: 'none' };
   return { success: true, url: trimmed, action: 'copied_to_clipboard' };
 }
 
 /**
- * A2UI 标准 Capability 报文协商生成器 (遵循 renderer_capabilities.json 规范)
+ * A2UI standard Capability negotiation message generator (following renderer_capabilities.json)
  */
 const DEFAULT_CATALOG_ID = 'https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json';
 
@@ -767,7 +775,7 @@ function createRendererCapabilities(supportedCatalogs) {
 }
 
 /**
- * 官方 15 大内置函数库求解
+ * Evaluates official 15 built-in functions
  */
 function evaluateFunction(funcName, args = {}, dataModel = {}, scope = null) {
   const resolvedArgs = {};
@@ -804,7 +812,7 @@ function evaluateFunction(funcName, args = {}, dataModel = {}, scope = null) {
     case 'formatDate': {
       let rawDate = resolvedArgs.value;
       if (rawDate === null || rawDate === undefined || rawDate === '') return '';
-      // 支持纯数字字符串时间戳 (如 "1730160000000" 或 10 位秒级时间戳)
+      // Supports numeric string timestamps (e.g. "1730160000000" or 10-digit second timestamps)
       if (typeof rawDate === 'string' && /^\d{10,13}$/.test(rawDate.trim())) {
         const num = Number(rawDate.trim());
         rawDate = rawDate.trim().length === 10 ? num * 1000 : num;
@@ -828,12 +836,12 @@ function evaluateFunction(funcName, args = {}, dataModel = {}, scope = null) {
       return executePluralize(resolvedArgs.value, resolvedArgs, resolvedArgs.locale || 'en-US');
     }
 
-    // 彻底杜绝二次执行与注入漏洞 (CR-N1)
+    // Prevents double execution and injection vulnerabilities (CR-N1)
     case 'formatString': {
       return resolvedArgs.value != null ? String(resolvedArgs.value) : '';
     }
 
-    // 校验与逻辑运算函数 (支持 ValidationResult)
+    // Validation and logical functions (supports ValidationResult)
     case 'required': {
       const val = resolvedArgs.value;
       let valid = true;
@@ -887,7 +895,7 @@ function evaluateFunction(funcName, args = {}, dataModel = {}, scope = null) {
         : (resolvedArgs.text !== undefined ? resolvedArgs.text : (resolvedArgs.input !== undefined ? resolvedArgs.input : ''));
       const val = String(rawVal !== null && rawVal !== undefined ? rawVal : '');
       const pattern = resolvedArgs.pattern !== undefined ? resolvedArgs.pattern : '.*';
-      // 文本与模式长度限制 (上限 250 字符文本，200 字符模式)
+      // Text and pattern length limits (max 250 chars text, 200 chars pattern)
       if (typeof pattern !== 'string' || pattern.length > 200) {
         console.warn(`[A2UI Validation] regex pattern invalid or exceeds 200 characters: ${pattern}`);
         return false;
@@ -896,7 +904,7 @@ function evaluateFunction(funcName, args = {}, dataModel = {}, scope = null) {
         console.warn(`[A2UI Validation] regex input string length (${val.length}) exceeds safe limit (250 chars). Rejected to prevent ReDoS.`);
         return false;
       }
-      // 深度静态结构分析拦截 ReDoS 灾难性指数与多项式回溯
+      // Deep static structure analysis to intercept ReDoS catastrophic backtracking
       if (!isSafeRegex(pattern)) {
         console.warn(`[A2UI Validation] regex pattern "${pattern}" rejected by ReDoS protection policy.`);
         return false;
@@ -936,7 +944,7 @@ function evaluateFunction(funcName, args = {}, dataModel = {}, scope = null) {
     }
 
     case 'openUrl': {
-      // 纯函数计算：渲染求值中绝不调用 wx.setClipboardData 或 wx.showToast 等具有副作用的系统 API (仅做 URL 格式校验与清洗)
+      // Pure function computation: never call side-effect APIs like wx.setClipboardData or wx.showToast during render evaluation
       const targetUrl = resolvedArgs.url !== undefined
         ? resolvedArgs.url
         : (resolvedArgs.target !== undefined ? resolvedArgs.target : resolvedArgs.value);

@@ -83,7 +83,7 @@ async function main() {
   <meta name="viewport" content="width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background-color: #f7f8fa; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", sans-serif; }
+    body { background-color: #f7f8fa; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif; }
     ${combinedCss}
     .chat-viewport { flex: 1; overflow-y: auto; }
     .chat-content { padding: 14px 14px 20px 14px; }
@@ -92,13 +92,13 @@ async function main() {
 <body>
   <div class="agent-app-container">
     
-    <!-- 1. 顶部 Agent 状态栏 -->
+    <!-- 1. Top Agent Status Bar -->
     <div class="agent-nav-bar">
       <div class="agent-identity">
         <div class="agent-status-dot online"></div>
         <div class="agent-info">
           <span class="agent-name">A2UI Agent</span>
-          <span class="agent-status-text">就绪 · 帧 6/6 · 25 节点</span>
+          <span class="agent-status-text">Ready · Chunk 6/6 · 25 nodes</span>
         </div>
       </div>
 
@@ -114,22 +114,22 @@ async function main() {
       </div>
     </div>
 
-    <!-- 2. 主会话与 Surface 舞台 -->
+    <!-- 2. Main Conversation & Surface Viewport -->
     <div class="chat-viewport">
       <div class="chat-content">
         
-        <!-- 用户提问气泡 -->
+        <!-- User prompt bubble -->
         <div class="user-message-row">
           <div class="user-bubble">
-            <span class="user-prompt-text">推荐 4 家纽约高分特色餐厅并支持即时预订</span>
+            <span class="user-prompt-text">Recommend 4 top-rated New York specialty restaurants with instant booking</span>
           </div>
         </div>
 
-        <!-- Agent 动态下发并渲染出的 Surface -->
+        <!-- Dynamic Agent Surface -->
         <div class="agent-surface-wrapper">
           <div class="surface-badge-row">
             <span class="surface-tag">A2UI SURFACE: gallery-incremental</span>
-            <span class="surface-meta">已装配 25 个节点 · 交互已就绪</span>
+            <span class="surface-meta">25 nodes assembled · Ready</span>
           </div>
 
           <div class="a2ui-surface">
@@ -139,17 +139,17 @@ async function main() {
       </div>
     </div>
 
-    <!-- 3. 底部 Agent 交互输入与快捷意图胶囊 -->
+    <!-- 3. Bottom Agent Input & Preset Chips -->
     <div class="agent-bottom-bar">
       <div class="chips-row" style="margin-bottom: 8px;">
-        <div class="chip-item active"><span class="chip-text">🍽 餐厅探索与预订</span></div>
-        <div class="chip-item"><span class="chip-text">✈️ 实时航班动态</span></div>
-        <div class="chip-item"><span class="chip-text">🎧 电商商品卡片</span></div>
-        <div class="chip-item"><span class="chip-text">🥗 美食菜谱指南</span></div>
+        <div class="chip-item active"><span class="chip-text">🍽 Restaurant Booking</span></div>
+        <div class="chip-item"><span class="chip-text">✈️ Live Flight Status</span></div>
+        <div class="chip-item"><span class="chip-text">🎧 Product Card</span></div>
+        <div class="chip-item"><span class="chip-text">🥗 Recipe Guide</span></div>
       </div>
 
       <div class="input-row">
-        <input class="agent-input" placeholder="向 A2UI Agent 提问或切换场景..." readonly value="推荐 4 家纽约高分特色餐厅..." />
+        <input class="agent-input" placeholder="Ask A2UI Agent or select a scenario..." readonly value="Recommend 4 top-rated NYC restaurants..." />
         <div class="send-btn"><span class="send-btn-icon">↑</span></div>
       </div>
     </div>

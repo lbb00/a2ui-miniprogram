@@ -1,12 +1,12 @@
 /* ==========================================================================
-   A2UI Standard Theme (标准通用中性主题)
-   严格对标 A2UI 官方默认标准色深蓝 (#1777ee / #17e) 与中性灰阶
-   适合绝大部分生产环境小程序直接使用，支持作为宿主定制主题基底
+   A2UI Standard Theme (Default Neutral Theme)
+   Aligned with A2UI official default deep blue (#1777ee / #17e) and neutral grays.
+   Suitable for production MiniPrograms and as host custom baseline.
    ========================================================================== */
 
 page,
 .theme-default {
-  /* ================= 官方标准 Design Tokens (A2UI Universal Spec) ================= */
+  /* ================= Standard Design Tokens (A2UI Universal Spec) ================= */
   --a2ui-color-primary: #1777ee;
   --a2ui-color-on-primary: #ffffff;
   --a2ui-color-primary-light: rgba(23, 119, 238, 0.08);
@@ -20,13 +20,13 @@ page,
   --a2ui-color-secondary: #dddddd;
   --a2ui-color-on-secondary: #333333;
 
-  /* 尺寸与卡片专用 Token */
+  /* Sizing and Card Tokens */
   --a2ui-card-border-radius: 24rpx;
   --a2ui-card-padding: 24rpx;
   --a2ui-card-box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.05);
   --a2ui-button-border-radius: 8rpx;
 
-  /* ================= 向下兼容别名 (Historic Variable Aliases) ================= */
+  /* ================= Backward-Compatible Variable Aliases ================= */
   --a2ui-primary-color: var(--a2ui-color-primary);
   --a2ui-primary-contrast: var(--a2ui-color-on-primary);
   --a2ui-primary-light: var(--a2ui-color-primary-light);

@@ -1,6 +1,6 @@
 <view class="a2ui-fallback-box">
   <view wx:if="{{isDev}}" class="a2ui-fallback-diag">
-    <text class="a2ui-diag-tag">⚠️ A2UI 扩展组件未挂载</text>
+    <text class="a2ui-diag-tag">⚠️ A2UI Custom Component Unmounted</text>
     <text class="a2ui-diag-text">&lt;{{node.component || 'CustomNode'}} /&gt;</text>
   </view>
 

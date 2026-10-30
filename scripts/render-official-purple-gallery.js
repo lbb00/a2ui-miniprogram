@@ -83,7 +83,7 @@ async function main() {
 
   const page = await browser.newPage();
 
-  // 1. 渲染 00_incremental.json (官方 Gallery 蓝紫色主题实测)
+  // 1. Render 00_incremental.json (Official Slate Lavender Gallery theme)
   const engine1 = new A2UIEngine();
   const case1 = ALL_CASES.find(c => c.file === '00_incremental.json');
   engine1.process(case1.messages);
@@ -123,14 +123,14 @@ async function main() {
         <div class="surfaces-header-bar">
           <div class="back-to-search-btn">
             <span class="back-icon">‹</span>
-            <span class="back-label">返回搜索</span>
+            <span class="back-label">Back to Search</span>
           </div>
           <div class="surface-status-pill">
             <span class="dot-indicator"></span>
-            <span class="pill-meta">gallery-incremental (25 节点)</span>
+            <span class="pill-meta">gallery-incremental (25 nodes)</span>
           </div>
           <div class="replay-stream-btn">
-            <span class="replay-icon">⟳ 流式回放</span>
+            <span class="replay-icon">⟳ Stream Replay</span>
           </div>
         </div>
 
@@ -152,7 +152,7 @@ async function main() {
   await page.screenshot({ path: out1 });
   console.log('Saved:', out1);
 
-  // 2. 渲染 08_user-profile.json (官方 Gallery 图中的 Sarah Chen 用户卡片)
+  // 2. Render 08_user-profile.json (Sarah Chen User Profile card)
   const engine2 = new A2UIEngine();
   const case2 = ALL_CASES.find(c => c.file === '08_user-profile.json');
   engine2.process(case2.messages);
@@ -191,14 +191,14 @@ async function main() {
         <div class="surfaces-header-bar">
           <div class="back-to-search-btn">
             <span class="back-icon">‹</span>
-            <span class="back-label">返回搜索</span>
+            <span class="back-label">Back to Search</span>
           </div>
           <div class="surface-status-pill">
             <span class="dot-indicator"></span>
-            <span class="pill-meta">${surfaces2[0]} (19 节点)</span>
+            <span class="pill-meta">${surfaces2[0]} (19 nodes)</span>
           </div>
           <div class="replay-stream-btn">
-            <span class="replay-icon">⟳ 流式回放</span>
+            <span class="replay-icon">⟳ Stream Replay</span>
           </div>
         </div>
 

@@ -34,3 +34,6 @@ jobs:
 
       - name: Run headless automator test
         run: npm run test:sim
+
+      - name: Run miniprogram-simulate E2E component test
+        run: npm run test:simulate

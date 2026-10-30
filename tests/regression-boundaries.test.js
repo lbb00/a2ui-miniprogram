@@ -1,6 +1,6 @@
 /**
- * Claude Code Review 回归测试套件 (CR-C1 ~ CR-L6)
- * 验证对 Claude 指出的全部安全漏洞、规范差异及边界异常的加固成果
+ * Claude Code Review Regression Test Suite (CR-C1 ~ CR-L6)
+ * Verifies security defenses, specification alignment, and boundary handling.
  */
 
 const assert = require('assert');
@@ -9,25 +9,25 @@ const { getValueByPath, resolveValue, resolveDeep, evaluateFunction } = require(
 const { parsePointer, toPointer, getIn, setIn, resolveSegs } = require('../miniprogram/core/pointer');
 
 console.log('================================================================');
-console.log('🛡️  开始执行 Claude Code Review 专项加固回归测试套件');
+console.log('🛡️  Running Claude Code Review Hardening Regression Suite');
 console.log('================================================================\n');
 
-// 1. [CR-C3] 原型链污染防御
-console.log('👉 [1/8] 验证 JSON Pointer 原型链污染防御 (CR-C3)');
+// 1. [CR-C3] Prototype pollution defense
+console.log('👉 [1/8] Verify JSON Pointer prototype pollution defense (CR-C3)');
 {
   assert.throws(() => setIn({}, parsePointer('/__proto__/polluted'), 'yes'));
-  assert.strictEqual(({}).polluted, undefined, 'Object.prototype 绝不能被污染');
+  assert.strictEqual(({}).polluted, undefined, 'Object.prototype must not be polluted');
 
   assert.throws(() => setIn({}, parsePointer('/constructor/prototype/p2'), 1));
-  assert.strictEqual(({}).p2, undefined, 'constructor.prototype 绝不能被污染');
+  assert.strictEqual(({}).p2, undefined, 'constructor.prototype must not be polluted');
 
-  assert.strictEqual(getValueByPath({}, '/constructor'), undefined, '不能读取 constructor 属性');
-  assert.strictEqual(getValueByPath({}, '/__proto__'), undefined, '不能读取 __proto__ 属性');
-  console.log('   ✓ CR-C3 原型链安全攻防校验 100% 通过');
+  assert.strictEqual(getValueByPath({}, '/constructor'), undefined, 'Cannot read constructor property');
+  assert.strictEqual(getValueByPath({}, '/__proto__'), undefined, 'Cannot read __proto__ property');
+  console.log('   ✓ CR-C3 prototype pollution defense verified 100%');
 }
 
-// 2. [CR-C2] and/or 规范参数与嵌套函数求值
-console.log('👉 [2/8] 验证 and/or/not 逻辑函数与 ValidationResult (CR-C2)');
+// 2. [CR-C2] and/or spec arguments and nested function evaluation
+console.log('👉 [2/8] Verify and/or/not logical functions and ValidationResult (CR-C2)');
 {
   assert.strictEqual(evaluateFunction('and', { values: [false, false] }), false);
   assert.strictEqual(evaluateFunction('and', { values: [true, false] }), false);
@@ -39,17 +39,17 @@ console.log('👉 [2/8] 验证 and/or/not 逻辑函数与 ValidationResult (CR-C
   assert.strictEqual(evaluateFunction('not', { value: true }), false);
   assert.strictEqual(evaluateFunction('not', { value: false }), true);
 
-  // 嵌套 ValidationResult
+  // Nested ValidationResult
   const failedRequired = { '@call': 'required', args: { value: '' } };
   assert.strictEqual(evaluateFunction('and', { values: [failedRequired, true] }), false);
 
   const passedRequired = { '@call': 'required', args: { value: 'ok' } };
   assert.strictEqual(evaluateFunction('and', { values: [passedRequired, true] }), true);
-  console.log('   ✓ CR-C2 and/or/not 逻辑运算与嵌套函数求值校验通过');
+  console.log('   ✓ CR-C2 and/or/not logic and nested function evaluation verified');
 }
 
-// 3. [CR-C4] 模板自引用防爆与 DAG 共享节点 (CR-C4 / CR-E10)
-console.log('👉 [3/8] 验证模板自引用环路拦截与 DAG 共享节点 (CR-C4 / CR-E10)');
+// 3. [CR-C4] Template self-reference recursion guard & DAG shared nodes (CR-C4 / CR-E10)
+console.log('👉 [3/8] Verify template cycle defense and DAG shared nodes (CR-C4 / CR-E10)');
 {
   const S = 'cycle_surf';
   const engine = new A2UIEngine();
@@ -69,10 +69,10 @@ console.log('👉 [3/8] 验证模板自引用环路拦截与 DAG 共享节点 (C
   let tree = null;
   assert.doesNotThrow(() => {
     tree = engine.getRenderTree(S);
-  }, '自引用模板绝对不可导致栈溢出崩溃');
-  assert(tree, '应正常生成受保护的渲染树');
+  }, 'Self-referencing templates must not cause stack overflow');
+  assert(tree, 'Protected render tree should be generated');
 
-  // DAG 共享节点
+  // DAG shared nodes
   const dagEngine = new A2UIEngine();
   dagEngine.process({
     createSurface: {
@@ -88,11 +88,11 @@ console.log('👉 [3/8] 验证模板自引用环路拦截与 DAG 共享节点 (C
   const dagTree = dagEngine.getRenderTree(S);
   assert.strictEqual(dagTree.children[0].children[0].text, 'SHARED');
   assert.strictEqual(dagTree.children[1].children[0].text, 'SHARED');
-  console.log('   ✓ CR-C4 自引用安全防御与 DAG 共享树组装通过');
+  console.log('   ✓ CR-C4 self-reference defense & DAG shared node assembly verified');
 }
 
-// 4. [CR-C1] A2UI v1.0 标准 Action 消息上报
-console.log('👉 [4/8] 验证标准 A2UI v1.0 Action 消息格式与作用域求值 (CR-C1)');
+// 4. [CR-C1] Standard A2UI v1.0 Action message reporting
+console.log('👉 [4/8] Verify standard A2UI v1.0 Action message format and scope evaluation (CR-C1)');
 {
   const S = 'action_surf';
   const engine = new A2UIEngine();
@@ -140,11 +140,11 @@ console.log('👉 [4/8] 验证标准 A2UI v1.0 Action 消息格式与作用域�
   assert.strictEqual(actionMsg.action.context.itemIndex, 0);
   assert.strictEqual(actionMsg.action.userMessage, 'Buy Apple');
   assert(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(actionMsg.action.timestamp));
-  console.log('   ✓ CR-C1 Action 消息标准格式与完整动态求值通过');
+  console.log('   ✓ CR-C1 Action message format and dynamic evaluation verified');
 }
 
-// 5. [CR-H1] 双向绑定相对路径寻址与即时生效
-console.log('👉 [5/8] 验证双向绑定相对路径绝对化与即时生效 (CR-H1)');
+// 5. [CR-H1] Two-way binding relative path resolution and reactivity
+console.log('👉 [5/8] Verify two-way binding relative path resolution and reactivity (CR-H1)');
 {
   const S = 'binding_surf';
   const engine = new A2UIEngine();
@@ -170,17 +170,17 @@ console.log('👉 [5/8] 验证双向绑定相对路径绝对化与即时生效 (
   assert.strictEqual(tree.children[0].valuePath, '/todos/0/text');
   assert.strictEqual(tree.children[1].valuePath, '/todos/1/text');
 
-  // 客户端修改 Task 2
+  // Client modifies Task 2
   engine.handleInputChange(S, tree.children[1].valuePath, 'Task 2 Modified');
   assert.strictEqual(engine.surfaces.get(S).dataModel.todos[1].text, 'Task 2 Modified');
 
   const updatedTree = engine.getRenderTree(S);
   assert.strictEqual(updatedTree.children[1].value, 'Task 2 Modified');
-  console.log('   ✓ CR-H1 相对路径精准反写与双向绑定渲染联动通过');
+  console.log('   ✓ CR-H1 relative path write-back and rendering reactivity verified');
 }
 
-// 6. [CR-H2] 安全单遍模板插值与防注入
-console.log('👉 [6/8] 验证安全单遍模板插值与防二次执行 (CR-H2)');
+// 6. [CR-H2] Single pass secure template interpolation & injection defense
+console.log('👉 [6/8] Verify secure single-pass interpolation and injection prevention (CR-H2)');
 {
   const model = {
     user: { name: '${/secret}' },
@@ -190,49 +190,49 @@ console.log('👉 [6/8] 验证安全单遍模板插值与防二次执行 (CR-H2)
     meta: { a: 1 },
   };
 
-  // 防二次执行注入
+  // Prevent double evaluation
   const injected = resolveValue('Hello ${/user/name}', model);
-  assert.strictEqual(injected, 'Hello ${/secret}', '数据中的表达式绝不可二次执行');
+  assert.strictEqual(injected, 'Hello ${/secret}', 'Expressions in data must not be evaluated twice');
 
-  // 转义 \${
+  // Escape \${
   const escaped = resolveValue('Cost is \\${/rawNum}', model);
   assert.strictEqual(escaped, 'Cost is ${/rawNum}');
 
-  // null 序列化为空字符串
+  // Null serializes to empty string
   const nullStr = resolveValue('Val: [${/empty}]', model);
   assert.strictEqual(nullStr, 'Val: []');
 
-  // 对象序列化为 JSON
+  // Object serializes to JSON
   const objStr = resolveValue('Meta: ${/meta}', model);
   assert.strictEqual(objStr, 'Meta: {"a":1}');
-  console.log('   ✓ CR-H2 安全单遍插值与防数据注入通过');
+  console.log('   ✓ CR-H2 secure single-pass interpolation verified');
 }
 
-// 7. [CR-H3] updateDataModel RFC 6901 替换与删除语义
-console.log('👉 [7/8] 验证 updateDataModel 根替换、删除与数组追加 (CR-H3)');
+// 7. [CR-H3] updateDataModel RFC 6901 replace and delete semantics
+console.log('👉 [7/8] Verify updateDataModel root replace, deletion & array append (CR-H3)');
 {
   const S = 'rfc_surf';
   const engine = new A2UIEngine();
   engine.process({ createSurface: { surfaceId: S } });
 
-  // 根路径替换
+  // Root path replace
   engine.processMessage({ updateDataModel: { surfaceId: S, path: '/', value: { a: 10 } } });
   engine.processMessage({ updateDataModel: { surfaceId: S, path: '/', value: { b: 20 } } });
   assert.deepStrictEqual(engine.surfaces.get(S).dataModel, { b: 20 });
 
-  // null 删除字段
+  // Null deletes property
   engine.processMessage({ updateDataModel: { surfaceId: S, path: '/b', value: null } });
   assert.strictEqual(engine.surfaces.get(S).dataModel.b, undefined);
 
-  // 数组 '-' 追加
+  // Array '-' append
   engine.processMessage({ updateDataModel: { surfaceId: S, path: '/tags', value: ['tech'] } });
   engine.processMessage({ updateDataModel: { surfaceId: S, path: '/tags/-', value: 'a2ui' } });
   assert.deepStrictEqual(engine.surfaces.get(S).dataModel.tags, ['tech', 'a2ui']);
-  console.log('   ✓ CR-H3 RFC 6901 数据模型更新语义通过');
+  console.log('   ✓ CR-H3 RFC 6901 data model update semantics verified');
 }
 
-// 8. [CR-M1 / CR-M3] 内置函数库完整性与校验失败禁用按钮
-console.log('👉 [8/8] 验证内置函数库完整性与 Check 失败禁用按钮 (CR-M1 / CR-M3)');
+// 8. [CR-M1 / CR-M3] Built-in functions & check failure disables Button
+console.log('👉 [8/8] Verify built-in function library and check failure Button disable (CR-M1 / CR-M3)');
 {
   // formatDate TR35
   const dStr = evaluateFunction('formatDate', { value: 0, format: 'yyyy' });
@@ -244,7 +244,7 @@ console.log('👉 [8/8] 验证内置函数库完整性与 Check 失败禁用按�
   // formatNumber decimals
   assert.strictEqual(evaluateFunction('formatNumber', { value: 1234.5678, decimals: 2 }), '1,234.57');
 
-  // Check 失败禁用按钮
+  // Check failure disables Button
   const S = 'check_surf';
   const engine = new A2UIEngine();
   engine.process({
@@ -268,17 +268,17 @@ console.log('👉 [8/8] 验证内置函数库完整性与 Check 失败禁用按�
   });
 
   const tree = engine.getRenderTree(S);
-  assert.strictEqual(tree.disabled, true, '校验失败时按钮必须自动 disabled');
+  assert.strictEqual(tree.disabled, true, 'Button must be disabled when checks fail');
 
-  // 输入合法 email
+  // Provide valid email
   engine.handleInputChange(S, '/email', 'admin@example.com');
   const validTree = engine.getRenderTree(S);
-  assert.strictEqual(validTree.disabled, undefined, '校验通过时按钮解除 disabled');
-  console.log('   ✓ CR-M1 / CR-M3 内置函数与 Check 按钮联动验证通过');
+  assert.strictEqual(validTree.disabled, undefined, 'Button must be enabled when checks pass');
+  console.log('   ✓ CR-M1 / CR-M3 built-in functions & Button check linkage verified');
 }
 
-// 9. [CR-N1] formatString 二次执行与数据注入拦截
-console.log('👉 [9/12] 验证 formatString 彻底消除二次求值与输入注入 (CR-N1)');
+// 9. [CR-N1] formatString double evaluation & injection defense
+console.log('👉 [9/12] Verify formatString eliminates double evaluation and data injection (CR-N1)');
 {
   const S = 'n1_surf';
   const engine = new A2UIEngine();
@@ -297,12 +297,12 @@ console.log('👉 [9/12] 验证 formatString 彻底消除二次求值与输入�
   const tr = engine.getRenderTree(S);
   engine.handleInputChange(S, tr.children[0].valuePath, '${/secret}');
   const updatedTree = engine.getRenderTree(S);
-  assert.strictEqual(updatedTree.children[1].text, '${/secret}', 'formatString 绝不可二次执行数据中的表达式');
-  console.log('   ✓ CR-N1 formatString 防注入验证通过');
+  assert.strictEqual(updatedTree.children[1].text, '${/secret}', 'formatString must not evaluate expressions in data');
+  console.log('   ✓ CR-N1 formatString injection defense verified');
 }
 
-// 10. [CR-N3] DAG 指数级膨胀防御
-console.log('👉 [10/12] 验证 DAG 拓扑多级引用节点防爆上限 (CR-N3)');
+// 10. [CR-N3] DAG exponential explosion guard
+console.log('👉 [10/12] Verify DAG multi-level reference explosion limit (CR-N3)');
 {
   const S = 'n3_surf';
   const L = 18;
@@ -321,12 +321,12 @@ console.log('👉 [10/12] 验证 DAG 拓扑多级引用节点防爆上限 (CR-N3
     if (x.children) x.children.forEach(count);
   })(tr);
 
-  assert(totalNodes <= 5000, `总节点数应受 MAX_TOTAL_NODES 限制，实际: ${totalNodes}`);
-  console.log(`   ✓ CR-N3 DAG 指数膨胀防护验证通过，总节点被安全限制在: ${totalNodes}`);
+  assert(totalNodes <= 5000, `Total nodes should be limited by MAX_TOTAL_NODES, got: ${totalNodes}`);
+  console.log(`   ✓ CR-N3 DAG exponential explosion guard verified, nodes capped at: ${totalNodes}`);
 }
 
-// 11. [CR-N4] 实例 ID 抗路径碰撞
-console.log('👉 [11/12] 验证不同列表路径下按钮实例 ID 与上下文隔离 (CR-N4)');
+// 11. [CR-N4] Instance ID collision resistance
+console.log('👉 [11/12] Verify instance ID and context isolation across different paths (CR-N4)');
 {
   const S = 'n4_surf';
   const engine = new A2UIEngine();
@@ -355,18 +355,18 @@ console.log('👉 [11/12] 验证不同列表路径下按钮实例 ID 与上下�
   const btn1 = tr.children[0].children[0];
   const btn2 = tr.children[1].children[0];
 
-  assert.notStrictEqual(btn1.id, btn2.id, '不同路径的实例 ID 必须完全独立');
+  assert.notStrictEqual(btn1.id, btn2.id, 'Instance IDs on different paths must be independent');
 
   const action1 = engine.createActionMessage(S, btn1.id);
   const action2 = engine.createActionMessage(S, btn2.id);
 
-  assert.strictEqual(action1.action.context.n, 'X', '点击第一个按钮上下文必须为 X');
-  assert.strictEqual(action2.action.context.n, 'Y', '点击第二个按钮上下文必须为 Y');
-  console.log('   ✓ CR-N4 路径抗碰撞与准确动作映射通过');
+  assert.strictEqual(action1.action.context.n, 'X', 'First button context must be X');
+  assert.strictEqual(action2.action.context.n, 'Y', 'Second button context must be Y');
+  console.log('   ✓ CR-N4 path anti-collision & action mapping verified');
 }
 
-// 12. [CR-N2 & CR-N5] 递归数据结构与原始值列表
-console.log('👉 [12/12] 验证递归评论树与原始值列表 @path "" (CR-N2 / CR-N5)');
+// 12. [CR-N2 & CR-N5] Recursive data structures and primitive list items
+console.log('👉 [12/12] Verify recursive comment tree and primitive list items with @path "" (CR-N2 / CR-N5)');
 {
   const S = 'n2_surf';
   const engine = new A2UIEngine();
@@ -398,18 +398,18 @@ console.log('👉 [12/12] 验证递归评论树与原始值列表 @path "" (CR-N
   const topComment = tr.children[0].children[0];
   assert.strictEqual(topComment.children[0].text, 'Top comment');
   const replies = topComment.children[1];
-  assert.strictEqual(replies.children.length, 1, '递归子评论必须成功渲染');
+  assert.strictEqual(replies.children.length, 1, 'Recursive sub-comment must be rendered');
   assert.strictEqual(replies.children[0].children[0].text, 'Nested reply');
 
   const tagsRow = tr.children[1];
   assert.deepStrictEqual(
     tagsRow.children.map((c) => c.text),
     ['alpha', 'beta'],
-    '原始值列表 @path "" 必须求值为当前元素自身'
+    'Primitive list @path "" must resolve to item itself'
   );
-  console.log('   ✓ CR-N2 / CR-N5 递归评论树渲染与原始值列表求值通过');
+  console.log('   ✓ CR-N2 / CR-N5 recursive comments & primitive list evaluation verified');
 }
 
 console.log('\n================================================================');
-console.log('🎉 全部 12 项 Claude CR 专项加固单测 100% PASS！');
+console.log('🎉 All 12 Claude CR hardening tests passed 100%!');
 console.log('================================================================\n');

@@ -5,7 +5,7 @@
   "window": {
     "backgroundTextStyle": "light",
     "navigationBarBackgroundColor": "#ffffff",
-    "navigationBarTitleText": "A2UI 微信小程序渲染器",
+    "navigationBarTitleText": "A2UI MiniProgram Renderer",
     "navigationBarTextStyle": "black"
   },
   "sitemapLocation": "sitemap.json"

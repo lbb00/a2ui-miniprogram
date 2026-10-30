@@ -81,7 +81,7 @@ async function main() {
 
   const page = await browser.newPage();
 
-  // 1. 渲染 Flutter 初始表单态 (_buildForm)
+  // 1. Render Flutter initial form state (_buildForm)
   const formHtml = `
 <!DOCTYPE html>
 <html>
@@ -120,9 +120,9 @@ async function main() {
         </div>
 
         <div class="preset-chips-group">
-          <div class="preset-chip"><span class="preset-chip-text">🍽 推荐 4 家纽约高分特色餐厅并支持即时预订</span></div>
-          <div class="preset-chip"><span class="preset-chip-text">✈️ 查询北京飞往上海实时航班动态</span></div>
-          <div class="preset-chip"><span class="preset-chip-text">🎧 查看索尼降噪无线耳机详情与评价</span></div>
+          <div class="preset-chip"><span class="preset-chip-text">🍽 Recommend 4 top-rated NYC restaurants with instant booking</span></div>
+          <div class="preset-chip"><span class="preset-chip-text">✈️ Check live flight status from Beijing to Shanghai</span></div>
+          <div class="preset-chip"><span class="preset-chip-text">🎧 View Sony wireless noise-canceling headphones reviews</span></div>
         </div>
       </div>
     </div>
@@ -135,7 +135,7 @@ async function main() {
   await page.screenshot({ path: picForm });
   console.log('Saved:', picForm);
 
-  // 2. 渲染 Flutter A2UI Surfaces 结果态 (_buildSurfaces)
+  // 2. Render Flutter A2UI Surfaces result state (_buildSurfaces)
   const engine = new A2UIEngine();
   const curCase = ALL_CASES.find(c => c.file === '00_incremental.json');
   engine.process(curCase.messages);
@@ -176,14 +176,14 @@ async function main() {
         <div class="surfaces-header-bar">
           <div class="back-to-search-btn">
             <span class="back-icon">‹</span>
-            <span class="back-label">返回搜索</span>
+            <span class="back-label">Back to Search</span>
           </div>
           <div class="surface-status-pill">
             <span class="dot-indicator"></span>
-            <span class="pill-meta">gallery-incremental (25 节点)</span>
+            <span class="pill-meta">gallery-incremental (25 nodes)</span>
           </div>
           <div class="replay-stream-btn">
-            <span class="replay-icon">⟳ 流式回放</span>
+            <span class="replay-icon">⟳ Stream Replay</span>
           </div>
         </div>
 

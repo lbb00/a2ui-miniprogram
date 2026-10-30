@@ -1,10 +1,10 @@
 /**
- * A2UI MiniProgram 业务自定义组件官方标准 Behavior 基类
+ * A2UI MiniProgram Standard Behavior Base Class for Custom Components
  * 
- * 核心功能：
- * 1. 规范化输入属性：node, surfaceId, uiState, scope
- * 2. 自动开启 { bubbles: true, composed: true } 穿透 Shadow DOM
- * 3. 内置拼音输入法合成态保护 (IME Composition Guard)，避免受控输入光标跳动与丢字
+ * Core Capabilities:
+ * 1. Standardizes input properties: node, surfaceId, uiState, scope
+ * 2. Automatically sets { bubbles: true, composed: true } across Shadow DOM
+ * 3. Built-in IME Composition Guard to prevent cursor jumping and text loss
  */
 
 /* global Behavior */
@@ -35,8 +35,8 @@ const a2uiCustomBehavior = (typeof Behavior === 'function')
 
       methods: {
         /**
-         * 派发 A2UI 动作消息
-         * @param {Object|null} customContext - 运行时额外携带的动态上下文 (如点击数据点坐标)
+         * Dispatch A2UI action message
+         * @param {Object|null} customContext - Dynamic runtime context (e.g. clicked data coordinates)
          */
         dispatchAction(customContext = null) {
           const node = this.data.node;
@@ -62,9 +62,9 @@ const a2uiCustomBehavior = (typeof Behavior === 'function')
         },
 
         /**
-         * 派发双向数据绑定输入变更
-         * @param {*} value - 新值
-         * @param {string|null} customPath - 指定回写路径 (默认使用 node.valuePath)
+         * Dispatch two-way data-bound input change
+         * @param {*} value - New value
+         * @param {string|null} customPath - Explicit target path (defaults to node.valuePath)
          */
         dispatchInput(value, customPath = null) {
           const node = this.data.node;
@@ -87,14 +87,14 @@ const a2uiCustomBehavior = (typeof Behavior === 'function')
         },
 
         /**
-         * IME 拼音输入法合成开始
+         * IME composition start
          */
         onCompositionStart() {
           this.data.isComposing = true;
         },
 
         /**
-         * IME 拼音输入法合成结束
+         * IME composition end
          */
         onCompositionEnd(e) {
           this.data.isComposing = false;
@@ -104,7 +104,7 @@ const a2uiCustomBehavior = (typeof Behavior === 'function')
         },
 
         /**
-         * 安全输入处理函数：在 IME 合成阶段阻断数据冲刷
+         * Safe input handler: blocks data flushing during IME composition
          */
         handleSafeInput(e) {
           if (this.data.isComposing) return;

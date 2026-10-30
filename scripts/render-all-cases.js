@@ -1,6 +1,6 @@
 /**
- * 自动化批量渲染 A2UI 官方全部 43 个用例的真实视图截屏
- * 使用系统 Chromium/Edge 驱动，挂载真实的 a2ui-surface.wxss
+ * Automated batch renderer for A2UI official 43 use case screenshots
+ * Uses system Chromium/Edge with real a2ui-surface.wxss styles
  */
 
 const puppeteer = require('puppeteer-core');
@@ -15,7 +15,7 @@ const EDGE_PATH = process.env.BROWSER_EXECUTABLE_PATH || '/Applications/Microsof
 const wxssSurface = fs.readFileSync(path.resolve(__dirname, '../components/a2ui-surface/a2ui-surface.wxss'), 'utf8');
 const wxssIndex = fs.readFileSync(path.resolve(__dirname, '../pages/index/index.wxss'), 'utf8');
 
-// 转换 rpx 为 px (标准 375px 视口下 1rpx = 0.5px)
+// Convert rpx to px (at standard 375px viewport, 1rpx = 0.5px)
 const combinedCss = (wxssIndex + '\n' + wxssSurface).replace(/(\d+(?:\.\d+)?)rpx/g, (_, n) => `${parseFloat(n) * 0.5}px`);
 
 function escapeHtml(str) {

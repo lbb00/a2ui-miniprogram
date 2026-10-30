@@ -14,6 +14,7 @@
     "test:unit": "node scripts/run-tests.js --unit",
     "test:e2e": "node tests/e2e/run-automator.js --strict",
     "test:sim": "node tests/e2e/headless-automator.test.js",
+    "test:simulate": "node tests/e2e/simulate-component-e2e.test.js",
     "test:perf": "node scripts/run-tests.js --perf",
     "test:style": "node scripts/run-tests.js --style",
     "lint": "oxlint",
@@ -46,7 +47,9 @@
   "devDependencies": {
     "@changesets/cli": "^3.0.3",
     "jest": "^29.7.0",
+    "jsdom": "^26.0.0",
     "miniprogram-automator": "^0.11.0",
+    "miniprogram-simulate": "^1.6.2",
     "oxlint": "^1.90.0",
     "puppeteer-core": "^24.3.0"
   }

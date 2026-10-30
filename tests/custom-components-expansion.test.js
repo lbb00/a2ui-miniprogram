@@ -1,12 +1,12 @@
 const assert = require('node:assert');
 const { A2UIEngine, a2uiCustomBehavior } = require('../index.js');
 
-console.log('🧪 开始运行业务自定义扩展组件全链路测试 (tests/custom-components-expansion.test.js)');
+console.log('🧪 Running custom components expansion lifecycle tests (tests/custom-components-expansion.test.js)');
 
 // =========================================================================
-// [1] 自定义组件注册、打标 isCustom 与动态属性解析
+// [1] Custom component registration, isCustom tagging & dynamic properties
 // =========================================================================
-console.log('\n👉 [1/6] 验证自定义组件打标 isCustom 与动态属性求解');
+console.log('\n👉 [1/6] Verify custom component registration, isCustom tag & dynamic property resolution');
 {
   const engine = new A2UIEngine();
   engine.registerCustomComponent('VegaChart');
@@ -18,11 +18,11 @@ console.log('\n👉 [1/6] 验证自定义组件打标 isCustom 与动态属性�
       createSurface: {
         surfaceId: 'surf_custom',
         dataModel: {
-          chartTitle: '2026年Q3销售额折线图',
+          chartTitle: 'Q3 2026 Sales Trend',
           seriesData: [120, 200, 150, 80],
           lat: 39.9042,
           lng: 116.4074,
-          cityName: '北京',
+          cityName: 'Beijing',
         },
         components: [
           {
@@ -56,32 +56,32 @@ console.log('\n👉 [1/6] 验证自定义组件打标 isCustom 与动态属性�
   ]);
 
   const tree = engine.getRenderTree('surf_custom');
-  assert.ok(tree, '渲染树应当成功生成');
+  assert.ok(tree, 'Render tree should be generated successfully');
   assert.strictEqual(tree.children.length, 2);
 
   const chartNode = tree.children[0];
   assert.strictEqual(chartNode.component, 'VegaChart');
-  assert.strictEqual(chartNode.isCustom, true, '自定义组件必须被标记为 isCustom: true');
-  assert.strictEqual(chartNode.title, '2026年Q3销售额折线图', '动态 @path 标题求解应当正确');
-  assert.deepStrictEqual(chartNode.data, [120, 200, 150, 80], '动态 @path 数据数组求解应当正确');
-  assert.strictEqual(chartNode.theme, 'dark', '静态属性应当完整保留');
-  assert.ok(chartNode.props, 'node.props 字典应当存在');
-  assert.strictEqual(chartNode.props.title, '2026年Q3销售额折线图');
+  assert.strictEqual(chartNode.isCustom, true, 'Custom component must have isCustom: true');
+  assert.strictEqual(chartNode.title, 'Q3 2026 Sales Trend', 'Dynamic @path title should resolve correctly');
+  assert.deepStrictEqual(chartNode.data, [120, 200, 150, 80], 'Dynamic @path series data should resolve correctly');
+  assert.strictEqual(chartNode.theme, 'dark', 'Static properties must be preserved');
+  assert.ok(chartNode.props, 'node.props map must exist');
+  assert.strictEqual(chartNode.props.title, 'Q3 2026 Sales Trend');
   assert.deepStrictEqual(chartNode.props.data, [120, 200, 150, 80]);
 
   const mapNode = tree.children[1];
   assert.strictEqual(mapNode.component, 'MapMarker');
   assert.strictEqual(mapNode.isCustom, true);
   assert.strictEqual(mapNode.latitude, 39.9042);
-  assert.strictEqual(mapNode.city, '北京');
+  assert.strictEqual(mapNode.city, 'Beijing');
 
-  console.log('   ✓ 自定义组件打标与动态属性求解完全正确');
+  console.log('   ✓ Custom component tagging & dynamic property resolution verified');
 }
 
 // =========================================================================
-// [2] 容器型自定义组件 (带 children) 递归子树编译
+// [2] Container-type custom component with children recursive AST compilation
 // =========================================================================
-console.log('\n👉 [2/6] 验证容器型自定义组件递归编译 children (子树倒灌基础)');
+console.log('\n👉 [2/6] Verify container custom component recursive children compilation');
 {
   const engine = new A2UIEngine();
   engine.registerCustomComponent('MyAccordion');
@@ -94,13 +94,13 @@ console.log('\n👉 [2/6] 验证容器型自定义组件递归编译 children (�
         surfaceId: 'surf_container',
         dataModel: {
           gaugeVal: 85,
-          userTip: '系统负载正常',
+          userTip: 'System load normal',
         },
         components: [
           {
             id: 'root',
             component: 'MyAccordion',
-            title: '系统监控折叠板',
+            title: 'Monitoring Accordion',
             children: ['gauge_1', 'tip_text', 'action_btn'],
           },
           {
@@ -116,7 +116,7 @@ console.log('\n👉 [2/6] 验证容器型自定义组件递归编译 children (�
           {
             id: 'action_btn',
             component: 'Button',
-            text: '刷新数据',
+            text: 'Refresh Data',
             action: {
               event: { name: 'refresh_metrics' },
             },
@@ -130,31 +130,31 @@ console.log('\n👉 [2/6] 验证容器型自定义组件递归编译 children (�
   assert.ok(tree);
   assert.strictEqual(tree.component, 'MyAccordion');
   assert.strictEqual(tree.isCustom, true);
-  assert.strictEqual(tree.children.length, 3, '容器型自定义组件必须拥有完整的子节点 AST');
+  assert.strictEqual(tree.children.length, 3, 'Container custom component must preserve children AST');
 
-  // 第 1 个子节点是自定义组件 MyGauge
+  // First child is custom component MyGauge
   const child1 = tree.children[0];
   assert.strictEqual(child1.component, 'MyGauge');
   assert.strictEqual(child1.isCustom, true);
   assert.strictEqual(child1.percent, 85);
 
-  // 第 2 个子节点是标准 Text
+  // Second child is standard Text
   const child2 = tree.children[1];
   assert.strictEqual(child2.component, 'Text');
-  assert.strictEqual(child2.text, '系统负载正常');
+  assert.strictEqual(child2.text, 'System load normal');
 
-  // 第 3 个子节点是标准 Button
+  // Third child is standard Button
   const child3 = tree.children[2];
   assert.strictEqual(child3.component, 'Button');
-  assert.strictEqual(child3.text, '刷新数据');
+  assert.strictEqual(child3.text, 'Refresh Data');
 
-  console.log('   ✓ 容器型自定义组件混合包含自定义与官方组件编译正确');
+  console.log('   ✓ Container custom component mixing custom and standard components verified');
 }
 
 // =========================================================================
-// [3] 自定义组件的双向数据绑定反写与定向差量补丁
+// [3] Custom component two-way data binding and delta patches
 // =========================================================================
-console.log('\n👉 [3/6] 验证自定义组件双向数据绑定与差量 patches 计算');
+console.log('\n👉 [3/6] Verify custom component two-way binding & delta patch calculation');
 {
   const engine = new A2UIEngine();
   engine.registerCustomComponent('ColorPicker');
@@ -187,27 +187,27 @@ console.log('\n👉 [3/6] 验证自定义组件双向数据绑定与差量 patch
   assert.strictEqual(tree1.children[0].value, '#ff0000');
   assert.strictEqual(tree1.children[0].valuePath, '/selectedColor');
 
-  // 模拟客户端输入反写
+  // Simulate client input write-back
   engine.handleInputChange('surf_input', '/selectedColor', '#00ff00', { silent: true });
   const tree2 = engine.getRenderTree('surf_input');
   assert.strictEqual(tree2.children[0].value, '#00ff00');
 
-  // 计算差量补丁
+  // Compute delta patches
   const patches = engine.computeTreePatches(tree1, tree2, 'localRenderTree');
   assert.ok(Object.keys(patches).length > 0);
   assert.ok(
     patches['localRenderTree.children[0].value'] === '#00ff00' ||
     patches['localRenderTree.children[0]'] !== undefined,
-    '应当生成针对自定义组件的值补丁'
+    'Should produce value patch targeting custom component'
   );
 
-  console.log('   ✓ 自定义组件双向绑定与差量补丁验证通过');
+  console.log('   ✓ Custom component two-way binding & delta patch verified');
 }
 
 // =========================================================================
-// [4] Action 动作消息闭环生成
+// [4] Action outbound message generation
 // =========================================================================
-console.log('\n👉 [4/6] 验证自定义组件 Action 出站协议生成');
+console.log('\n👉 [4/6] Verify custom component action outbound message generation');
 {
   const engine = new A2UIEngine();
   engine.registerCustomComponent('QuickCard');
@@ -243,22 +243,22 @@ console.log('\n👉 [4/6] 验证自定义组件 Action 出站协议生成');
   assert.strictEqual(actionMsg.action.sourceComponentId, 'root');
   assert.deepStrictEqual(actionMsg.action.context, { uid: 'user_999' });
 
-  console.log('   ✓ 自定义组件 Action 出站报文封装符合 A2UI v1.0 规范');
+  console.log('   ✓ Custom component action outbound message aligns with A2UI v1.0 spec');
 }
 
 // =========================================================================
-// [5] a2uiCustomBehavior 模块定义验证
+// [5] a2uiCustomBehavior module export verification
 // =========================================================================
-console.log('\n👉 [5/6] 验证 a2uiCustomBehavior 模块导出');
+console.log('\n👉 [5/6] Verify a2uiCustomBehavior module export');
 {
-  assert.ok(a2uiCustomBehavior !== undefined, 'a2uiCustomBehavior 必须正常导出');
-  console.log('   ✓ a2uiCustomBehavior 模块导出正常');
+  assert.ok(a2uiCustomBehavior !== undefined, 'a2uiCustomBehavior must be exported');
+  console.log('   ✓ a2uiCustomBehavior exported successfully');
 }
 
 // =========================================================================
-// [6] 未注册未知组件的防御隔离
+// [6] Unregistered component defense & isolation
 // =========================================================================
-console.log('\n👉 [6/6] 验证未注册的幻觉组件触发 UNKNOWN_COMPONENT 但不崩溃');
+console.log('\n👉 [6/6] Verify unregistered component triggers UNKNOWN_COMPONENT error without crashing');
 {
   const engine = new A2UIEngine();
   let errorCount = 0;
@@ -277,19 +277,19 @@ console.log('\n👉 [6/6] 验证未注册的幻觉组件触发 UNKNOWN_COMPONENT
           {
             id: 'root',
             component: 'HallucinatedWidget',
-            text: '我是未注册组件',
+            text: 'Unregistered widget node',
           },
         ],
       },
     },
   ]);
 
-  assert.strictEqual(errorCount, 1, '未注册未知组件必须触发 UNKNOWN_COMPONENT 错误上报');
+  assert.strictEqual(errorCount, 1, 'Unregistered component must trigger UNKNOWN_COMPONENT error event');
   const tree = engine.getRenderTree('surf_unknown');
-  assert.ok(tree, '引擎树构建绝不崩溃');
-  assert.strictEqual(tree.isCustom, true, '即使未注册也打标 isCustom 以便 WXML 兜底渲染');
+  assert.ok(tree, 'Engine tree generation must not crash');
+  assert.strictEqual(tree.isCustom, true, 'Tagged with isCustom for WXML generic fallback');
 
-  console.log('   ✓ 未知组件错误上报与安全构建验证通过');
+  console.log('   ✓ Unregistered component error interception & safe rendering verified');
 }
 
-console.log('\n🎉 所有业务自定义扩展组件全链路测试 100% 通过！\n');
+console.log('\n🎉 All custom components expansion tests passed 100%!\n');

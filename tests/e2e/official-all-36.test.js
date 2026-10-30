@@ -1,6 +1,7 @@
 /**
- * A2UI 官方全部 36 组用例 (共 43 个 JSON 规范文件) 全量自动化测试套件
- * 严格覆盖 00 到 36 号全部官方用例的协议解析、数据求解、状态机流转与组件树组装
+ * A2UI Official 36 Example Suites (43 JSON Specification Files)
+ * Complete automated suite covering cases 00 through 36: protocol parsing, data resolution,
+ * state machine transitions, and component tree assembly.
  */
 
 const fs = require('fs');
@@ -12,7 +13,7 @@ const EXAMPLES_DIR = path.resolve(__dirname, '../../fixtures/official-examples')
 const files = fs.readdirSync(EXAMPLES_DIR).filter((f) => f.endsWith('.json')).sort();
 
 console.log('=====================================================');
-console.log(`🚀 执行 A2UI 官方全量用例自动化测试 (共 ${files.length} 个文件)`);
+console.log(`🚀 Running A2UI Official Example Suites (${files.length} spec files)`);
 console.log('=====================================================\n');
 
 let passCount = 0;
@@ -30,10 +31,10 @@ files.forEach((file, index) => {
     const engine = new A2UIEngine();
     const messages = rawData.messages || [];
 
-    // 1. 处理所有协议消息
+    // 1. Process all protocol messages
     engine.process(messages);
 
-    // 2. 找到本用例创建的 surfaceId
+    // 2. Locate target surfaceId from messages
     let surfaceId = null;
     for (const msg of messages) {
       if (msg.createSurface && msg.createSurface.surfaceId) {
@@ -43,26 +44,24 @@ files.forEach((file, index) => {
     }
 
     if (!surfaceId) {
-      throw new Error(`用例未声明 createSurface.surfaceId`);
+      throw new Error(`Example does not declare createSurface.surfaceId`);
     }
 
-    // 3. 校验 Surface 存在性
-    assert.ok(engine.surfaces.has(surfaceId), `Surface [${surfaceId}] 未成功创建`);
-    const surface = engine.surfaces.get(surfaceId);
+    // 3. Verify surface existence
+    assert.ok(engine.surfaces.has(surfaceId), `Surface [${surfaceId}] was not created`);
 
-    // 4. 生成渲染树
+    // 4. Generate render tree
     const tree = engine.getRenderTree(surfaceId);
-    assert.ok(tree, `未能组装出有效渲染树 (surfaceId=${surfaceId})`);
+    assert.ok(tree, `Failed to assemble valid render tree (surfaceId=${surfaceId})`);
 
-    // 5. 递归遍历整棵渲染树，校验节点完整性并收集统计数据
+    // 5. Traverse tree, verify node integrity and collect metrics
     let nodeCount = 0;
     const walkNode = (node) => {
       if (!node) return;
       nodeCount++;
-      assert.ok(node.id, `节点缺少 id 字段`);
-      assert.ok(node.component, `节点缺少 component 类型`);
+      assert.ok(node.id, `Node missing id field`);
+      assert.ok(node.component, `Node missing component type`);
 
-      // 统计组件类型
       componentUsageStats[node.component] = (componentUsageStats[node.component] || 0) + 1;
 
       if (node.children && Array.isArray(node.children)) {
@@ -74,7 +73,7 @@ files.forEach((file, index) => {
     totalNodesCount += nodeCount;
     passCount++;
 
-    console.log(`[${caseNum}/${files.length}] PASS: ${file.padEnd(35)} | 组件节点数: ${nodeCount.toString().padStart(2, ' ')} | "${caseTitle}"`);
+    console.log(`[${caseNum}/${files.length}] PASS: ${file.padEnd(35)} | nodes: ${nodeCount.toString().padStart(2, ' ')} | "${caseTitle}"`);
   } catch (err) {
     console.error(`[${caseNum}/${files.length}] FAIL: ${file} ->`, err.message);
     process.exit(1);
@@ -82,12 +81,12 @@ files.forEach((file, index) => {
 });
 
 console.log('\n=====================================================');
-console.log('📊 A2UI 官方全部用例测试统计汇总:');
-console.log(`- 测试用例总数: ${files.length} / ${files.length} (100% PASS)`);
-console.log(`- 成功解析并组装组件节点总数: ${totalNodesCount}`);
-console.log('- 涉及到的组件类型全量分布:');
+console.log('📊 A2UI Official Examples Metric Summary:');
+console.log(`- Total test suites: ${files.length} / ${files.length} (100% PASS)`);
+console.log(`- Total assembled component nodes: ${totalNodesCount}`);
+console.log('- Component distribution across catalog:');
 for (const [comp, count] of Object.entries(componentUsageStats).sort((a, b) => b[1] - a[1])) {
-  console.log(`    • ${comp.padEnd(16)}: ${count} 次`);
+  console.log(`    • ${comp.padEnd(16)}: ${count}`);
 }
 console.log('=====================================================\n');
-console.log('🎉 官方 00 ~ 36 全部官方用例已 100% 全量自动化测试通过！\n');
+console.log('🎉 All 36 official examples passed verification (100%)\n');

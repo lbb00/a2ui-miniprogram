@@ -71,22 +71,22 @@ async function main() {
   const page = await browser.newPage();
   const engine = new A2UIEngine();
 
-  // 1. 装配外壳
+  // 1. Assemble shell
   const curCase = ALL_CASES.find(c => c.file === '00_incremental.json');
   const shellMsgs = createShellMessages({
     currentIndex: 2,
     totalCases: 43,
     currentCaseName: curCase.name,
     currentCaseFile: curCase.file,
-    streamStatus: '全量就绪',
+    streamStatus: 'Fully Ready',
     streamProgress: '6/6',
     nodeCount: 25,
-    eventLogSummary: '[20:10:45] 动作: book_now | 载荷: {"restaurantName": "The Golden Fork"}',
+    eventLogSummary: '[20:10:45] Action: book_now | Payload: {"restaurantName": "The Golden Fork"}',
   });
   engine.process(shellMsgs);
   const shellTree = engine.getRenderTree('a2ui-test-shell');
 
-  // 2. 装配当前官方用例
+  // 2. Assemble official test case
   engine.process(curCase.messages);
   const caseTree = engine.getRenderTree('gallery-incremental');
 
@@ -101,7 +101,7 @@ async function main() {
   <meta name="viewport" content="width=375, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background-color: #f6f7f9; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif; }
+    body { background-color: #f6f7f9; font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
     ${combinedCss}
   </style>
 </head>

@@ -1,6 +1,6 @@
 /**
  * A2UI JSON Pointer (RFC 6901) & Safe Path Resolver
- * 包含原型链污染 (Prototype Pollution) 安全防御
+ * Includes prototype pollution security defenses
  */
 
 const FORBIDDEN_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
@@ -10,7 +10,7 @@ function hasOwn(obj, key) {
 }
 
 /**
- * 解析 JSON Pointer 路径为段数组
+ * Parse JSON Pointer path into segments array
  * RFC 6901: ~1 -> /, ~0 -> ~
  */
 function parsePointer(path) {
@@ -25,7 +25,7 @@ function parsePointer(path) {
 }
 
 /**
- * 将段数组组装为绝对 JSON Pointer 路径
+ * Assemble segments array into absolute JSON Pointer path
  * RFC 6901: ~ -> ~0, / -> ~1
  */
 function toPointer(segments) {
@@ -41,7 +41,7 @@ function toPointer(segments) {
 }
 
 /**
- * 安全沿路径取值，防范原型链污染
+ * Safely get value along path, preventing prototype pollution
  */
 function getIn(root, segments) {
   if (root == null) return undefined;
@@ -69,18 +69,18 @@ function sanitizeObject(val) {
 }
 
 /**
- * 安全沿路径设值，返回新的或修改后的 root
- * - 支持根替换 (segs.length === 0)
- * - 支持 null 删除字段
- * - 支持数组下标与 '-' 追加
- * - 拦截原型链污染
+ * Safely set value along path, returning new or modified root
+ * - Supports root replacement (segs.length === 0)
+ * - Supports null to delete property
+ * - Supports array index and '-' append
+ * - Blocks prototype pollution
  */
 function setIn(root, segments, value) {
   if (segments && segments.some((k) => FORBIDDEN_KEYS.has(k))) {
     throw new Error('SECURITY_ERROR: Forbidden property in path');
   }
 
-  // 根路径替换并过滤原型链注入
+  // Root path replacement with prototype pollution filtering
   if (!segments || segments.length === 0) {
     return value == null ? {} : sanitizeObject(value);
   }
@@ -127,14 +127,14 @@ function setIn(root, segments, value) {
 }
 
 /**
- * 根据当前作用域解析最终的段数组
+ * Resolve final segments array according to current scope
  */
 function resolveSegs(path, scope) {
   if (typeof path !== 'string') return [];
   if (path.startsWith('/')) {
     return parsePointer(path);
   }
-  // 相对路径
+  // Relative path
   const relSegs = parsePointer(path);
   if (scope && scope.base && Array.isArray(scope.base)) {
     return scope.base.concat(relSegs);
@@ -143,8 +143,8 @@ function resolveSegs(path, scope) {
 }
 
 /**
- * 将 JSON Pointer 或段数组转为微信小程序 setData 属性路径
- * 例如: ['children', 0, 'value'] -> 'children[0].value'
+ * Convert JSON Pointer or segments array to WeChat MiniProgram setData property path
+ * e.g. ['children', 0, 'value'] -> 'children[0].value'
  */
 function toPropertyPath(pathOrSegs, rootPrefix = '') {
   const segs = Array.isArray(pathOrSegs) ? pathOrSegs : parsePointer(pathOrSegs);
@@ -161,7 +161,7 @@ function toPropertyPath(pathOrSegs, rootPrefix = '') {
 }
 
 /**
- * 快速浅层对象比较
+ * Fast shallow object comparison
  */
 function isShallowEqual(objA, objB) {
   if (objA === objB) return true;
@@ -193,7 +193,7 @@ function isShallowEqual(objA, objB) {
 }
 
 /**
- * 快速深层对象比较 (避免频繁 JSON.stringify 开销)
+ * Fast deep object comparison (avoids frequent JSON.stringify overhead)
  */
 function isDeepEqual(a, b, maxDepth = 5) {
   if (a === b) return true;
@@ -238,12 +238,12 @@ function isDeepEqual(a, b, maxDepth = 5) {
 }
 
 /**
- * 递归计算新旧渲染树的差量补丁 (Patches)
- * 专为微信小程序 setData 定向差量刷新设计：
- * - 拦截当前受控输入框 (activeComponentId) 的 value 字段回写，从根本上防止真机输入光标跳动与输入法打断
- * - 支持按节点属性路径精确定向更新 (如 validationError, disabled, displayLabel 等)
- * - 优化数组增量补丁传输，规避全量子节点数组反复传输
- * - 纯函数设计，杜绝就地变异 oldTree
+ * Recursively compute differential patches between old and new render trees
+ * Designed specifically for targeted WeChat MiniProgram setData updates:
+ * - Intercepts controlled input (activeComponentId) value writes to prevent cursor jumping
+ * - Supports granular property-level path updates (validationError, disabled, displayLabel, etc.)
+ * - Optimizes array incremental patches, avoiding redundant full children array transfers
+ * - Pure function design without in-place mutation of oldTree
  */
 function computeTreePatches(oldTree, newTree, rootPrefix = 'localRenderTree', options = {}, patches = {}) {
   if (oldTree === newTree) return patches;
@@ -290,7 +290,7 @@ function computeTreePatches(oldTree, newTree, rootPrefix = 'localRenderTree', op
         }
 
         if (prefixMatches) {
-          // 前缀子项深度差量对比
+          // Deep diff on prefix children
           for (let i = 0; i < oldLen; i++) {
             computeTreePatches(
               oldChildren[i],
@@ -300,7 +300,7 @@ function computeTreePatches(oldTree, newTree, rootPrefix = 'localRenderTree', op
               patches
             );
           }
-          // 仅传输增量下标补丁
+          // Transmit only incremental index patches
           for (let i = oldLen; i < newChildren.length; i++) {
             patches[toPropertyPath(['children', i], rootPrefix)] = newChildren[i];
           }
@@ -325,7 +325,7 @@ function computeTreePatches(oldTree, newTree, rootPrefix = 'localRenderTree', op
         patches
       );
     } else {
-      // 拦截受控输入框的 value 字段回写 (防真机光标跳动与失焦)
+      // Intercept controlled input value writes to avoid cursor jumping and blur
       if (activeId && (newTree.id === activeId || newTree.sourceId === activeId) && key === 'value') {
         continue;
       }
