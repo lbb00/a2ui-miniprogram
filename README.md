@@ -1,5 +1,7 @@
 # a2ui-miniprogram
 
+English | [简体中文](README.zh-CN.md)
+
 High-performance native [WeChat Mini Program](https://developers.weixin.qq.com/miniprogram/dev/framework/) renderer for the [A2UI (Agent-to-User Interface)](https://github.com/a2ui-project/a2ui) specification, tailored for mobile dual-thread execution, sub-millisecond state updates, and bandwidth-optimized `setData` transfers.
 
 <p align="center">
