@@ -68,7 +68,7 @@ async function runBenchmark() {
   setupDom();
   const simulate = require('miniprogram-simulate');
   const compPath = path.resolve(__dirname, '../miniprogram/components/a2ui-surface/a2ui-surface');
-  const compId = simulate.load(compPath);
+  const compId = simulate.load(compPath, { rootPath: path.resolve(__dirname, '../miniprogram') });
 
   // ---------------------------------------------------------------------------------
   // Benchmark 1: WXML Node Tree Analysis across all Official Specifications (43 files)
@@ -361,29 +361,17 @@ async function runBenchmark() {
 
   // Benchmark 2.2: Streaming Frame Batch Scheduler Simulation
   console.log('\n   Streaming Frame Scheduler (wx.nextTick Coalescing):');
+  const benchComp = simulate.render(compId);
   let rawStreamCount = 100;
   let batchedSetDataCount = 0;
-  let mockTickScheduled = false;
-  let pendingTask = null;
 
-  function mockScheduleFrameRender(task) {
-    pendingTask = task;
-    if (mockTickScheduled) return;
-    mockTickScheduled = true;
-    process.nextTick(() => {
-      if (pendingTask) {
-        batchedSetDataCount++;
-        pendingTask = null;
-      }
-      mockTickScheduled = false;
+  // Emit 100 tokens rapidly within microtask loop into real component scheduler
+  for (let i = 0; i < rawStreamCount; i++) {
+    benchComp.instance._scheduleFrameRender(() => {
+      batchedSetDataCount++;
     });
   }
-
-  // Emit 100 tokens rapidly within microtask loop
-  for (let i = 0; i < rawStreamCount; i++) {
-    mockScheduleFrameRender(() => {});
-  }
-  await new Promise((resolve) => setTimeout(resolve, 30));
+  await new Promise((resolve) => setTimeout(resolve, 50));
 
   const frameSavings = ((1 - batchedSetDataCount / rawStreamCount) * 100).toFixed(1);
   console.log(`     - Unbatched synchronous emissions: ${rawStreamCount} calls (would saturate JSBridge)`);

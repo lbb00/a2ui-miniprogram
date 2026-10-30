@@ -336,6 +336,176 @@ console.log('\n👉 [6/6] Verify P2: Image native webp and horizontal enhanced s
   console.log('   ✓ P2 webp="true" and enhanced scroll-view properties verified');
 }
 
+// ====================================================================
+// [7] Blue Team Defensive Architecture Hardening Verification
+// ====================================================================
+console.log('\n👉 [7/7] Verify Blue Team Defensive Architecture Hardening');
+{
+  // 1. WeChat setData ignoring undefined: property deletions
+  const oldCompTree = {
+    id: 'root',
+    component: 'Column',
+    children: [
+      {
+        id: 'input_field',
+        component: 'TextField',
+        value: 'test',
+        disabled: true,
+        validationError: 'Field is invalid',
+        weight: 2,
+        triggerNode: { id: 'trig', component: 'Text', text: 'T' },
+        options: ['opt1', 'opt2'],
+      },
+    ],
+  };
+
+  const newCompTree = {
+    id: 'root',
+    component: 'Column',
+    children: [
+      {
+        id: 'input_field',
+        component: 'TextField',
+        value: 'test',
+        // disabled, validationError, weight, triggerNode, options deleted
+      },
+    ],
+  };
+
+  const delPatches = computeTreePatches(oldCompTree, newCompTree, 'localRenderTree');
+
+  // Verify: NO patch value is undefined (WeChat bridge drops undefined)
+  for (const [k, v] of Object.entries(delPatches)) {
+    assert.notStrictEqual(v, undefined, `Patch value for ${k} must not be undefined`);
+  }
+
+  // Verify: boolean disabled defaults to false
+  assert.strictEqual(
+    delPatches['localRenderTree.children[0].disabled'],
+    false,
+    'Deleted disabled property must patch to false so button/field re-enables'
+  );
+
+  // Verify: string validationError defaults to empty string
+  assert.strictEqual(
+    delPatches['localRenderTree.children[0].validationError'],
+    '',
+    'Deleted validationError must patch to empty string to dismiss error banner'
+  );
+
+  // Verify: object triggerNode defaults to null
+  assert.strictEqual(
+    delPatches['localRenderTree.children[0].triggerNode'],
+    null,
+    'Deleted triggerNode object must patch to null'
+  );
+
+  // Verify: array options defaults to empty array
+  assert.deepStrictEqual(
+    delPatches['localRenderTree.children[0].options'],
+    [],
+    'Deleted options array must patch to empty array'
+  );
+
+  // Verify: number weight defaults to null
+  assert.strictEqual(
+    delPatches['localRenderTree.children[0].weight'],
+    null,
+    'Deleted number weight must patch to null'
+  );
+
+  // 2. Array shrinkage replaces entire children array to truncate in WeChat
+  const oldShrinkTree = {
+    id: 'root',
+    component: 'Column',
+    children: [
+      { id: 'c1', component: 'Text', text: '1' },
+      { id: 'c2', component: 'Text', text: '2' },
+      { id: 'c3', component: 'Text', text: '3' },
+    ],
+  };
+  const newShrinkTree = {
+    id: 'root',
+    component: 'Column',
+    children: [
+      { id: 'c1', component: 'Text', text: '1' },
+    ],
+  };
+  const shrinkPatches = computeTreePatches(oldShrinkTree, newShrinkTree, 'localRenderTree');
+  assert.ok(
+    'localRenderTree.children' in shrinkPatches,
+    'Shrunk array must transmit whole children array to ensure WeChat truncates dangling items'
+  );
+  assert.strictEqual(shrinkPatches['localRenderTree.children'].length, 1);
+
+  // 3. Active input cursor protection vs external programmatic resets
+  const typingOld = {
+    id: 'root',
+    component: 'Column',
+    children: [{ id: 'active_input', component: 'TextField', value: 'old' }],
+  };
+  const typingNew = {
+    id: 'root',
+    component: 'Column',
+    children: [{ id: 'active_input', component: 'TextField', value: 'typed' }],
+  };
+
+  // While typing: cursor protection suppresses value patch
+  const typingPatches = computeTreePatches(typingOld, typingNew, 'localRenderTree', {
+    activeComponentId: 'active_input',
+  });
+  assert.strictEqual(
+    typingPatches['localRenderTree.children[0].value'],
+    undefined,
+    'Active user typing must suppress value patch to avoid cursor jumping'
+  );
+
+  // Programmatic reset (forceValueUpdate: true): value patch is included
+  const resetPatches = computeTreePatches(typingOld, typingNew, 'localRenderTree', {
+    activeComponentId: 'active_input',
+    forceValueUpdate: true,
+  });
+  assert.strictEqual(
+    resetPatches['localRenderTree.children[0].value'],
+    'typed',
+    'Programmatic reset with forceValueUpdate must update active input value'
+  );
+
+  // 4. Component unmount safety in frame scheduler and tree updates
+  let compDef = null;
+  global.Component = (def) => { compDef = def; };
+  delete require.cache[require.resolve('../miniprogram/components/a2ui-surface/a2ui-surface.js')];
+  require('../miniprogram/components/a2ui-surface/a2ui-surface.js');
+
+  let setDataInvoked = 0;
+  const compInstance = {
+    data: { surfaceId: 'surf_unmount', localRenderTree: null },
+    setData(d) {
+      setDataInvoked++;
+    },
+    triggerEvent: () => {},
+  };
+  Object.assign(compInstance, compDef.methods);
+
+  // Simulate attach
+  compDef.lifetimes.attached.call(compInstance);
+  assert.strictEqual(compInstance._isUnmounted, false);
+
+  // Simulate detach
+  compDef.lifetimes.detached.call(compInstance);
+  assert.strictEqual(compInstance._isUnmounted, true);
+  assert.strictEqual(compInstance._currentActiveInputId, null);
+
+  // Calls after detach must safely no-op without invoking setData
+  compInstance._scheduleFrameRender(() => {
+    setDataInvoked++;
+  });
+  compInstance._applyTreeUpdate({ id: 'r' }, { id: 'r2' }, 'surf_unmount');
+  assert.strictEqual(setDataInvoked, 0, 'No setData or frame render must occur on unmounted component');
+
+  console.log('   ✓ Blue Team defensive hardening: deletions, array shrinkage, input reset & unmount safety verified');
+}
+
 console.log('\n================================================================');
-console.log('🎉 All 6 Round 11 performance & architecture tests passed 100%!');
+console.log('🎉 All Round 11 & Blue Team architecture tests passed 100%!');
 console.log('================================================================\n');

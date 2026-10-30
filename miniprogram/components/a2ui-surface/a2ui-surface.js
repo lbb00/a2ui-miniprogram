@@ -110,6 +110,7 @@ Component({
 
   lifetimes: {
     attached() {
+      this._isUnmounted = false;
       if (this.data.renderTree) {
         this.setData({ localRenderTree: this.data.renderTree }, () => {
           this.triggerEvent('rendered', { surfaceId: this.data.surfaceId });
@@ -119,12 +120,14 @@ Component({
       }
     },
     detached() {
+      this._isUnmounted = true;
       // Unsubscribe engine listeners on teardown to prevent leaks and double triggers (CR-M1)
       if (this._isFrameRenderScheduled) {
         this._pendingRenderTask = null;
         this._isFrameRenderScheduled = false;
       }
       this._currentActiveInputId = null;
+      this._lastUserInputValue = undefined;
       if (this._engineUnsubs) {
         this._engineUnsubs.forEach((unsub) => {
           try { unsub(); } catch (_) {}
@@ -153,6 +156,7 @@ Component({
     },
 
     _scheduleFrameRender(task) {
+      if (this._isUnmounted) return;
       this._pendingRenderTask = task;
       if (this._isFrameRenderScheduled) {
         return;
@@ -163,16 +167,26 @@ Component({
         : (fn) => setTimeout(fn, 16);
 
       nextTick(() => {
+        if (this._isUnmounted) {
+          this._isFrameRenderScheduled = false;
+          this._pendingRenderTask = null;
+          return;
+        }
         this._isFrameRenderScheduled = false;
         const pending = this._pendingRenderTask;
         this._pendingRenderTask = null;
         if (typeof pending === 'function') {
-          pending();
+          try {
+            pending();
+          } catch (err) {
+            console.error('[A2UI] Frame render task execution failed:', err);
+          }
         }
       });
     },
 
-    _applyTreeUpdate(oldTree, newTree, surfaceId) {
+    _applyTreeUpdate(oldTree, newTree, surfaceId, updateOptions = {}) {
+      if (this._isUnmounted) return;
       const engine = this.engine || this.internalEngine;
       const targetSurfaceId = surfaceId || this.data.surfaceId;
 
@@ -194,9 +208,11 @@ Component({
       }
 
       if (oldTree && typeof oldTree === 'object' && engine && typeof engine.computeTreePatches === 'function') {
-        const patches = engine.computeTreePatches(oldTree, newTree, 'localRenderTree', {
-          activeComponentId: this._currentActiveInputId,
-        });
+        const patchOpts = Object.assign(
+          { activeComponentId: this._currentActiveInputId },
+          updateOptions
+        );
+        const patches = engine.computeTreePatches(oldTree, newTree, 'localRenderTree', patchOpts);
         if (surfaceThemeStyle && this.data.surfaceThemeStyle !== surfaceThemeStyle) {
           patches.surfaceThemeStyle = surfaceThemeStyle;
         } else if (!surfaceThemeStyle && this.data.surfaceThemeStyle) {
@@ -319,6 +335,7 @@ Component({
         this._isFrameRenderScheduled = false;
       }
       this._currentActiveInputId = null;
+      this._lastUserInputValue = undefined;
       if (!keepExternalEngine) {
         if (this._engineUnsubs) {
           this._engineUnsubs.forEach((unsub) => {
@@ -342,12 +359,14 @@ Component({
 
     resetSession() {
       // Clear local state and view tree upon session change, preserving externally injected engine (CR-5)
+      this._currentActiveInputId = null;
+      this._lastUserInputValue = undefined;
       this.clear(true);
       // Fetch latest tree for surfaceId if engine is injected
       if (this.engine && this.data.surfaceId) {
         const tree = this.engine.getRenderTree(this.data.surfaceId);
         if (tree) {
-          this._applyTreeUpdate(null, tree, this.data.surfaceId);
+          this._applyTreeUpdate(null, tree, this.data.surfaceId, { forceValueUpdate: true });
         }
       }
     },
@@ -469,11 +488,14 @@ Component({
         || (e.detail && e.detail.componentId);
       if (componentId) {
         this._currentActiveInputId = componentId;
+        const node = typeof this.findNodeById === 'function' ? this.findNodeById(this.data.localRenderTree, componentId) : null;
+        this._lastUserInputValue = node ? node.value : undefined;
       }
     },
 
     handleInputBlur() {
       this._currentActiveInputId = null;
+      this._lastUserInputValue = undefined;
     },
 
     // ChoicePicker selection change (CR-2 & L1: uniform array structure)
@@ -655,6 +677,7 @@ Component({
       if (engine && path) {
         const oldTree = this.data.localRenderTree;
         this._currentActiveInputId = componentId;
+        this._lastUserInputValue = value;
         this._isHandlingInput = true;
         try {
           engine.handleInputChange(surfaceId, path, value, { silent: true });

@@ -20,8 +20,8 @@ module.exports = {};
     <view 
       wx:for="{{i.children}}" 
       wx:key="id" 
-      class="a2ui-row-item {{item.weight !== undefined || item.component === 'Column' ? 'a2ui-item-flex' : 'a2ui-item-own'}}" 
-      style="{{item.flexStyle ? item.flexStyle : (item.weight !== undefined ? 'flex: ' + item.weight + ' 1 0%; min-width: 0;' : 'flex: 0 0 auto;')}}"
+      class="a2ui-row-item {{(item.weight != null && item.weight !== '') || item.component === 'Column' ? 'a2ui-item-flex' : 'a2ui-item-own'}}" 
+      style="{{item.flexStyle ? item.flexStyle : ((item.weight != null && item.weight !== '') ? 'flex: ' + item.weight + ' 1 0%; min-width: 0;' : 'flex: 0 0 auto;')}}"
     >
       <template is="tmpl_1_node" data="{{ i: item, surfaceId, uiState }}" />
     </view>
@@ -142,7 +142,7 @@ module.exports = {};
       </checkbox-group>
     </block>
     <!-- 3. Default Selector Picker single selection -->
-    <picker wx:else mode="selector" range="{{i.options}}" range-key="label" value="{{i.selectedIndex !== undefined ? i.selectedIndex : 0}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handlePickerChange">
+    <picker wx:else mode="selector" range="{{i.options}}" range-key="label" value="{{i.selectedIndex != null && i.selectedIndex !== '' ? i.selectedIndex : 0}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handlePickerChange">
       <view class="a2ui-picker-box"><text>{{i.displayLabel || (i.options && i.options[i.selectedIndex] ? i.options[i.selectedIndex].label : (i.value || 'Please select'))}}</text></view>
     </picker>
   </view>
@@ -203,14 +203,14 @@ module.exports = {};
         data-id="{{i.id}}" 
         data-uikey="{{i.uiKey}}"
         data-idx="{{index}}" 
-        class="a2ui-tab-item {{(uiState[i.uiKey] !== undefined ? uiState[i.uiKey] : i.activeTab) === index ? 'active' : ''}}" 
+        class="a2ui-tab-item {{(uiState[i.uiKey] != null ? uiState[i.uiKey] : i.activeTab) === index ? 'active' : ''}}" 
         bindtap="onTabTap"
       >
         <text>{{t.title}}</text>
       </view>
     </view>
     <block wx:for="{{i.children}}" wx:key="id">
-      <view wx:if="{{(uiState[i.uiKey] !== undefined ? uiState[i.uiKey] : i.activeTab) === index}}">
+      <view wx:if="{{(uiState[i.uiKey] != null ? uiState[i.uiKey] : i.activeTab) === index}}">
         <template is="tmpl_1_node" data="{{ i: item, surfaceId, uiState }}" />
       </view>
     </block>
@@ -259,8 +259,8 @@ module.exports = {};
     <view 
       wx:for="{{i.children}}" 
       wx:key="id" 
-      class="a2ui-row-item {{item.weight !== undefined || item.component === 'Column' ? 'a2ui-item-flex' : 'a2ui-item-own'}}" 
-      style="{{item.flexStyle ? item.flexStyle : (item.weight !== undefined ? 'flex: ' + item.weight + ' 1 0%; min-width: 0;' : 'flex: 0 0 auto;')}}"
+      class="a2ui-row-item {{(item.weight != null && item.weight !== '') || item.component === 'Column' ? 'a2ui-item-flex' : 'a2ui-item-own'}}" 
+      style="{{item.flexStyle ? item.flexStyle : ((item.weight != null && item.weight !== '') ? 'flex: ' + item.weight + ' 1 0%; min-width: 0;' : 'flex: 0 0 auto;')}}"
     >
       <template is="tmpl_2_node" data="{{ i: item, surfaceId, uiState }}" />
     </view>
@@ -381,7 +381,7 @@ module.exports = {};
       </checkbox-group>
     </block>
     <!-- 3. Default Selector Picker single selection -->
-    <picker wx:else mode="selector" range="{{i.options}}" range-key="label" value="{{i.selectedIndex !== undefined ? i.selectedIndex : 0}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handlePickerChange">
+    <picker wx:else mode="selector" range="{{i.options}}" range-key="label" value="{{i.selectedIndex != null && i.selectedIndex !== '' ? i.selectedIndex : 0}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handlePickerChange">
       <view class="a2ui-picker-box"><text>{{i.displayLabel || (i.options && i.options[i.selectedIndex] ? i.options[i.selectedIndex].label : (i.value || 'Please select'))}}</text></view>
     </picker>
   </view>
@@ -442,14 +442,14 @@ module.exports = {};
         data-id="{{i.id}}" 
         data-uikey="{{i.uiKey}}"
         data-idx="{{index}}" 
-        class="a2ui-tab-item {{(uiState[i.uiKey] !== undefined ? uiState[i.uiKey] : i.activeTab) === index ? 'active' : ''}}" 
+        class="a2ui-tab-item {{(uiState[i.uiKey] != null ? uiState[i.uiKey] : i.activeTab) === index ? 'active' : ''}}" 
         bindtap="onTabTap"
       >
         <text>{{t.title}}</text>
       </view>
     </view>
     <block wx:for="{{i.children}}" wx:key="id">
-      <view wx:if="{{(uiState[i.uiKey] !== undefined ? uiState[i.uiKey] : i.activeTab) === index}}">
+      <view wx:if="{{(uiState[i.uiKey] != null ? uiState[i.uiKey] : i.activeTab) === index}}">
         <template is="tmpl_2_node" data="{{ i: item, surfaceId, uiState }}" />
       </view>
     </block>
@@ -498,8 +498,8 @@ module.exports = {};
     <view 
       wx:for="{{i.children}}" 
       wx:key="id" 
-      class="a2ui-row-item {{item.weight !== undefined || item.component === 'Column' ? 'a2ui-item-flex' : 'a2ui-item-own'}}" 
-      style="{{item.flexStyle ? item.flexStyle : (item.weight !== undefined ? 'flex: ' + item.weight + ' 1 0%; min-width: 0;' : 'flex: 0 0 auto;')}}"
+      class="a2ui-row-item {{(item.weight != null && item.weight !== '') || item.component === 'Column' ? 'a2ui-item-flex' : 'a2ui-item-own'}}" 
+      style="{{item.flexStyle ? item.flexStyle : ((item.weight != null && item.weight !== '') ? 'flex: ' + item.weight + ' 1 0%; min-width: 0;' : 'flex: 0 0 auto;')}}"
     >
       <template is="tmpl_3_node" data="{{ i: item, surfaceId, uiState }}" />
     </view>
@@ -620,7 +620,7 @@ module.exports = {};
       </checkbox-group>
     </block>
     <!-- 3. Default Selector Picker single selection -->
-    <picker wx:else mode="selector" range="{{i.options}}" range-key="label" value="{{i.selectedIndex !== undefined ? i.selectedIndex : 0}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handlePickerChange">
+    <picker wx:else mode="selector" range="{{i.options}}" range-key="label" value="{{i.selectedIndex != null && i.selectedIndex !== '' ? i.selectedIndex : 0}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handlePickerChange">
       <view class="a2ui-picker-box"><text>{{i.displayLabel || (i.options && i.options[i.selectedIndex] ? i.options[i.selectedIndex].label : (i.value || 'Please select'))}}</text></view>
     </picker>
   </view>
@@ -681,14 +681,14 @@ module.exports = {};
         data-id="{{i.id}}" 
         data-uikey="{{i.uiKey}}"
         data-idx="{{index}}" 
-        class="a2ui-tab-item {{(uiState[i.uiKey] !== undefined ? uiState[i.uiKey] : i.activeTab) === index ? 'active' : ''}}" 
+        class="a2ui-tab-item {{(uiState[i.uiKey] != null ? uiState[i.uiKey] : i.activeTab) === index ? 'active' : ''}}" 
         bindtap="onTabTap"
       >
         <text>{{t.title}}</text>
       </view>
     </view>
     <block wx:for="{{i.children}}" wx:key="id">
-      <view wx:if="{{(uiState[i.uiKey] !== undefined ? uiState[i.uiKey] : i.activeTab) === index}}">
+      <view wx:if="{{(uiState[i.uiKey] != null ? uiState[i.uiKey] : i.activeTab) === index}}">
         <template is="tmpl_3_node" data="{{ i: item, surfaceId, uiState }}" />
       </view>
     </block>
@@ -737,8 +737,8 @@ module.exports = {};
     <view 
       wx:for="{{i.children}}" 
       wx:key="id" 
-      class="a2ui-row-item {{item.weight !== undefined || item.component === 'Column' ? 'a2ui-item-flex' : 'a2ui-item-own'}}" 
-      style="{{item.flexStyle ? item.flexStyle : (item.weight !== undefined ? 'flex: ' + item.weight + ' 1 0%; min-width: 0;' : 'flex: 0 0 auto;')}}"
+      class="a2ui-row-item {{(item.weight != null && item.weight !== '') || item.component === 'Column' ? 'a2ui-item-flex' : 'a2ui-item-own'}}" 
+      style="{{item.flexStyle ? item.flexStyle : ((item.weight != null && item.weight !== '') ? 'flex: ' + item.weight + ' 1 0%; min-width: 0;' : 'flex: 0 0 auto;')}}"
     >
       <template is="tmpl_4_node" data="{{ i: item, surfaceId, uiState }}" />
     </view>
@@ -859,7 +859,7 @@ module.exports = {};
       </checkbox-group>
     </block>
     <!-- 3. Default Selector Picker single selection -->
-    <picker wx:else mode="selector" range="{{i.options}}" range-key="label" value="{{i.selectedIndex !== undefined ? i.selectedIndex : 0}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handlePickerChange">
+    <picker wx:else mode="selector" range="{{i.options}}" range-key="label" value="{{i.selectedIndex != null && i.selectedIndex !== '' ? i.selectedIndex : 0}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handlePickerChange">
       <view class="a2ui-picker-box"><text>{{i.displayLabel || (i.options && i.options[i.selectedIndex] ? i.options[i.selectedIndex].label : (i.value || 'Please select'))}}</text></view>
     </picker>
   </view>
@@ -920,14 +920,14 @@ module.exports = {};
         data-id="{{i.id}}" 
         data-uikey="{{i.uiKey}}"
         data-idx="{{index}}" 
-        class="a2ui-tab-item {{(uiState[i.uiKey] !== undefined ? uiState[i.uiKey] : i.activeTab) === index ? 'active' : ''}}" 
+        class="a2ui-tab-item {{(uiState[i.uiKey] != null ? uiState[i.uiKey] : i.activeTab) === index ? 'active' : ''}}" 
         bindtap="onTabTap"
       >
         <text>{{t.title}}</text>
       </view>
     </view>
     <block wx:for="{{i.children}}" wx:key="id">
-      <view wx:if="{{(uiState[i.uiKey] !== undefined ? uiState[i.uiKey] : i.activeTab) === index}}">
+      <view wx:if="{{(uiState[i.uiKey] != null ? uiState[i.uiKey] : i.activeTab) === index}}">
         <template is="tmpl_4_node" data="{{ i: item, surfaceId, uiState }}" />
       </view>
     </block>
@@ -976,8 +976,8 @@ module.exports = {};
     <view 
       wx:for="{{i.children}}" 
       wx:key="id" 
-      class="a2ui-row-item {{item.weight !== undefined || item.component === 'Column' ? 'a2ui-item-flex' : 'a2ui-item-own'}}" 
-      style="{{item.flexStyle ? item.flexStyle : (item.weight !== undefined ? 'flex: ' + item.weight + ' 1 0%; min-width: 0;' : 'flex: 0 0 auto;')}}"
+      class="a2ui-row-item {{(item.weight != null && item.weight !== '') || item.component === 'Column' ? 'a2ui-item-flex' : 'a2ui-item-own'}}" 
+      style="{{item.flexStyle ? item.flexStyle : ((item.weight != null && item.weight !== '') ? 'flex: ' + item.weight + ' 1 0%; min-width: 0;' : 'flex: 0 0 auto;')}}"
     >
       <a2ui-surface-layer node="{{item}}" surfaceId="{{surfaceId}}" uiState="{{uiState}}" />
     </view>
@@ -1098,7 +1098,7 @@ module.exports = {};
       </checkbox-group>
     </block>
     <!-- 3. Default Selector Picker single selection -->
-    <picker wx:else mode="selector" range="{{i.options}}" range-key="label" value="{{i.selectedIndex !== undefined ? i.selectedIndex : 0}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handlePickerChange">
+    <picker wx:else mode="selector" range="{{i.options}}" range-key="label" value="{{i.selectedIndex != null && i.selectedIndex !== '' ? i.selectedIndex : 0}}" disabled="{{i.disabled}}" data-id="{{i.id}}" data-path="{{i.valuePath}}" bindchange="handlePickerChange">
       <view class="a2ui-picker-box"><text>{{i.displayLabel || (i.options && i.options[i.selectedIndex] ? i.options[i.selectedIndex].label : (i.value || 'Please select'))}}</text></view>
     </picker>
   </view>
@@ -1159,14 +1159,14 @@ module.exports = {};
         data-id="{{i.id}}" 
         data-uikey="{{i.uiKey}}"
         data-idx="{{index}}" 
-        class="a2ui-tab-item {{(uiState[i.uiKey] !== undefined ? uiState[i.uiKey] : i.activeTab) === index ? 'active' : ''}}" 
+        class="a2ui-tab-item {{(uiState[i.uiKey] != null ? uiState[i.uiKey] : i.activeTab) === index ? 'active' : ''}}" 
         bindtap="onTabTap"
       >
         <text>{{t.title}}</text>
       </view>
     </view>
     <block wx:for="{{i.children}}" wx:key="id">
-      <view wx:if="{{(uiState[i.uiKey] !== undefined ? uiState[i.uiKey] : i.activeTab) === index}}">
+      <view wx:if="{{(uiState[i.uiKey] != null ? uiState[i.uiKey] : i.activeTab) === index}}">
         <a2ui-surface-layer node="{{item}}" surfaceId="{{surfaceId}}" uiState="{{uiState}}" />
       </view>
     </block>

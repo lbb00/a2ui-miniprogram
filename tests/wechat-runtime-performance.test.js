@@ -66,7 +66,7 @@ async function runSuite() {
   setupDom();
   const simulate = require('miniprogram-simulate');
   const compPath = path.resolve(__dirname, '../miniprogram/components/a2ui-surface/a2ui-surface');
-  const compId = simulate.load(compPath);
+  const compId = simulate.load(compPath, { rootPath: path.resolve(__dirname, '../miniprogram') });
 
   // 1. WXML DOM Node Count & Nesting Depth Verification
   console.log('\n👉 [1/5] Verify WXML DOM Node Count & Depth against WeChat Scorecard');
@@ -182,37 +182,23 @@ async function runSuite() {
   // 4. Streaming Frame Scheduler Coalescing
   console.log('\n👉 [4/5] Verify Streaming Frame Coalescing (wx.nextTick Microtask Batching)');
   {
+    const comp = simulate.render(compId);
     let batchedRuns = 0;
-    let scheduled = false;
-    let latestTask = null;
-
-    function scheduleFrameRender(task) {
-      latestTask = task;
-      if (scheduled) return;
-      scheduled = true;
-      process.nextTick(() => {
-        if (latestTask) {
-          batchedRuns++;
-          latestTask();
-          latestTask = null;
-        }
-        scheduled = false;
-      });
-    }
-
     let executedValue = 0;
-    // Emit 50 rapid stream chunks
+
+    // Emit 50 rapid stream chunks into real component frame scheduler
     for (let i = 1; i <= 50; i++) {
-      scheduleFrameRender(() => {
+      comp.instance._scheduleFrameRender(() => {
+        batchedRuns++;
         executedValue = i;
       });
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 25));
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     assert.strictEqual(batchedRuns, 1, '50 microtask emissions must be coalesced into 1 single batched execution');
     assert.strictEqual(executedValue, 50, 'Batched execution must run the latest state');
-    console.log('   ✓ Frame coalescing verified: 50 chunks -> 1 batched setData (98% reduction) PASS');
+    console.log('   ✓ Real component frame coalescing verified: 50 chunks -> 1 batched setData (98% reduction) PASS');
   }
 
   // 5. Zero Resource Leakage after 100 Lifecycle Cycles
