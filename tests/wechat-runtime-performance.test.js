@@ -252,6 +252,43 @@ async function runSuite() {
     console.log('   ✓ Zero lingering surfaces and listeners verified across 100 cycles PASS');
   }
 
+  // 6. Data Mutation Pipeline & High-Throughput Assertion (< 0.5ms, > 2000 ops/sec)
+  console.log('\n👉 [6/6] Verify Data Mutation Pipeline Latency (< 0.5ms) & Throughput (> 2,000 ops/sec)');
+  {
+    const { performance: perf } = require('perf_hooks');
+    const fixture = require('../fixtures/official-examples/05_product-card.json');
+    const engine = new A2UIEngine();
+    engine.process(fixture.messages);
+    const sId = 'gallery-product-card';
+
+    let tree = engine.getRenderTree(sId);
+    const iters = 200;
+    const start = perf.now();
+
+    for (let i = 0; i < iters; i++) {
+      engine.process([
+        {
+          updateDataModel: {
+            surfaceId: sId,
+            path: '/price',
+            value: 100 + (i % 20),
+          },
+        },
+      ]);
+      const nextTree = engine.getRenderTree(sId);
+      computeTreePatches(tree, nextTree, 'localRenderTree');
+      tree = nextTree;
+    }
+
+    const elapsed = perf.now() - start;
+    const avgMs = elapsed / iters;
+    const opsSec = Math.round((iters / elapsed) * 1000);
+
+    assert.ok(avgMs < 0.5, `Average data mutation latency (${avgMs.toFixed(3)}ms) must be under 0.5ms`);
+    assert.ok(opsSec > 2000, `Data mutation throughput (${opsSec} ops/sec) must exceed 2,000 ops/sec`);
+    console.log(`   ✓ Data mutation latency: ${(avgMs * 1000).toFixed(1)} us (${avgMs.toFixed(3)} ms) | Throughput: ${opsSec} ops/sec PASS`);
+  }
+
   teardownDom();
   console.log('\n🎉 All WeChat runtime performance tests passed (100% PASS)!\n');
 }
