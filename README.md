@@ -2,17 +2,16 @@
 
 English | [简体中文](README.zh-CN.md)
 
-High-performance native [WeChat Mini Program](https://developers.weixin.qq.com/miniprogram/dev/framework/) renderer for the [A2UI (Agent-to-User Interface)](https://github.com/a2ui-project/a2ui) specification, tailored for mobile dual-thread execution, sub-millisecond state updates, and bandwidth-optimized `setData` transfers.
+Native [WeChat Mini Program](https://developers.weixin.qq.com/miniprogram/dev/framework/) renderer for the [A2UI (Agent-to-User Interface)](https://github.com/a2ui-project/a2ui) specification, designed for dual-thread architecture and targeted differential updates.
 
 <p align="center">
   <a href="https://www.npmjs.com/package/a2ui-miniprogram"><img src="https://img.shields.io/npm/v/a2ui-miniprogram.svg?style=flat-square&color=6a6eac" alt="npm version"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="license"/></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-22%20%7C%2024-brightgreen.svg?style=flat-square" alt="node version"/></a>
   <a href="https://developers.weixin.qq.com/miniprogram/dev/framework/"><img src="https://img.shields.io/badge/WeChat%20Mini%20Program-%E2%89%A5%202.14.0-07c160.svg?style=flat-square" alt="wechat miniprogram"/></a>
-  <a href="https://github.com/a2ui-project/a2ui"><img src="https://img.shields.io/badge/A2UI%20Spec-v1.0%20Compliant-10b981.svg?style=flat-square" alt="spec"/></a>
+  <a href="https://github.com/a2ui-project/a2ui"><img src="https://img.shields.io/badge/A2UI%20Spec-v1.0-10b981.svg?style=flat-square" alt="spec"/></a>
   <a href="scripts/run-tests.js"><img src="https://img.shields.io/badge/tests-25%2F25%20passed-success.svg?style=flat-square" alt="tests"/></a>
-  <a href="scripts/benchmark-wechat-perf.js"><img src="https://img.shields.io/badge/setData%20reduction-up%20to%2097.6%25-blue.svg?style=flat-square" alt="setData reduction"/></a>
-  <a href="scripts/benchmark-wechat-perf.js"><img src="https://img.shields.io/badge/pipeline%20latency-0.10ms-brightgreen.svg?style=flat-square" alt="pipeline latency"/></a>
+  <a href="scripts/benchmark-wechat-perf.js"><img src="https://img.shields.io/badge/benchmarks-passing-blue.svg?style=flat-square" alt="benchmarks"/></a>
   <a href="miniprogram/index.d.ts"><img src="https://img.shields.io/badge/TypeScript-Ready-3178c6.svg?style=flat-square" alt="typescript"/></a>
 </p>
 
@@ -22,17 +21,16 @@ High-performance native [WeChat Mini Program](https://developers.weixin.qq.com/m
 
 ---
 
-## Key Highlights & Performance
+## Features
 
-- **Sub-Millisecond Data Pipeline**: Full update pipeline (RFC 6901 mutation $\to$ AST evaluation $\to$ differential patch diffing) executes in **~0.10 ms**, consuming only **0.60%** of the 60 FPS (16.66ms) frame budget.
-- **Up to 97.6% `setData` Bandwidth Reduction**: Granular path-level and array-index differential patches (`computeTreePatches`) shrink bridge payloads from kilobytes to ~80 bytes.
-- **Streaming Frame Coalescing (`wx.nextTick`)**: Automatically merges high-frequency AI Agent token chunk streams into smooth 60 FPS frame renders, cutting JSBridge traffic congestion by **99%**.
-- **Template Unrolling (Zero Component Bloat)**: Levels 0–4 static WXML template unrolling renders purely native tags with only **1** root custom component instance, avoiding Shadow DOM memory duplication and maintaining ultra-flat DOM depth (average 25 nodes, max depth 14).
-- **Two-Way Input Anti-Jump Protection**: Directional differential diffing skips active input value writes during user typing while safely honoring programmatic form resets.
-- **A2UI v1.0 Spec Compliance**: Complete support for `createSurface`, `updateComponents`, `updateDataModel`, `deleteSurface`, and client RPC (`callRendererFunction`).
-- **Zero Memory Leak Resilience**: Clean lifecycle teardown with 0 lingering listeners and 0 surviving surfaces across 200 consecutive lifecycle cycles.
-- **Hardened Security**: ReDoS regex guards against nested/fixed quantifiers, prototype pollution prevention (`__proto__`, `constructor`), and safe URL/markdown sanitization.
-- **Extensible Architecture**: Layout slots (`header`, `footer`, `empty`) and business custom components via WeChat `componentGenerics`.
+- **A2UI v1.0 Spec Alignment**: Supports `createSurface`, `updateComponents`, `updateDataModel`, `deleteSurface`, and client RPC (`callRendererFunction`).
+- **Differential `setData` Updates**: `computeTreePatches` calculates granular property- and index-level updates, reducing bridge payload size on state changes (typical reductions between 70% and 97% on benchmark cases).
+- **Frame Batching with `wx.nextTick`**: Coalesces high-frequency streaming chunks (such as LLM token streams) within microtask ticks to mitigate bridge congestion.
+- **Template Unrolling**: Emits static WXML templates (levels 0–4) using native view tags, maintaining a single root component instance and keeping DOM depth shallow (typically 10–14 levels across official catalog specs).
+- **Controlled Input Handling**: Skips active input value re-writing during local user keystrokes to mitigate cursor jumping on mobile virtual keyboards, while allowing external and programmatic resets.
+- **Lifecycle Cleanup**: Unsubscribes engine listeners, timers, and surface maps on component `detached` to prevent memory leaks during long sessions.
+- **Security Protections**: Built-in regex ReDoS guards against nested/fixed quantifiers, prototype pollution sanitization (`__proto__`, `constructor`), and safe URL/markdown rendering.
+- **Extensible Layout & Generics**: Supports named layout slots (`header`, `footer`, `empty`) and business custom components via WeChat `componentGenerics`.
 
 ---
 
@@ -58,44 +56,54 @@ sequenceDiagram
 
 ---
 
-## Performance & WeChat Runtime Benchmarks
+## Performance & Benchmarks
 
-The A2UI WeChat Mini Program renderer is engineered specifically for the mobile dual-thread execution model (JSCore Logic Thread vs WKWebView Render Thread) and WeChat Exparser component architecture.
+### Test Environment & Methodology
 
-### WeChat Official Performance Compliance Scorecard
+Benchmark figures below are generated by running `npm run bench` (`scripts/benchmark-wechat-perf.js`) across all 43 official A2UI catalog test suites.
 
-| Evaluation Dimension | WeChat Official Constraint | A2UI Benchmark Result | Compliance Status |
+- **Host Hardware**: Apple M4 (10-core CPU, 16 GB unified memory)
+- **Operating System**: macOS Sequoia 15.x (Darwin 25.5.0 arm64)
+- **JavaScript Runtime**: Node.js v24.18.0 (V8 12.9) / verified on Node.js v22.x
+- **WeChat Base Library Target**: MiniProgram Base Library $\ge$ 2.14.0
+- **Component Emulation**: `miniprogram-simulate` v1.6.1 (Exparser component lifecycle & WXML template compilation)
+
+> **Note on Real-Device Performance**: The pipeline latency metrics below measure pure logic-thread CPU execution (pointer resolution, AST generation, and diffing). On physical mobile devices (iOS JSCore / Android V8), end-to-end rendering additionally includes cross-process JSBridge serialization and native layout, which typically introduces 2–16 ms of latency depending on hardware.
+
+### WeChat Guidelines Compliance
+
+| Evaluation Dimension | WeChat Guideline | Benchmark Result (43 Spec Files) | Status |
 | :--- | :--- | :--- | :--- |
-| **WXML DOM Nodes Count** | Warning at `> 1,000` nodes | **25.4** average (Peak: **67** nodes across all 43 official spec files) | **100% Compliant** |
-| **DOM Nesting Depth** | Hard warning at `> 32` levels | **14** levels maximum | **100% Compliant** |
-| **Custom Component Count** | Shadow Root instantiation overhead | **1** root component instance (`<a2ui-surface>`) via 5-level unrolling | **Ultra-Flat** |
-| **`setData` Payload Volume** | Recommended `< 50 KB`, upper limit `256 KB` | **60 ~ 300 Bytes** per delta patch | **Up to 97.6% Savings** |
-| **Bridge Streaming Rate** | Avoid high-frequency unbatched bridge saturation | Coalesced via `wx.nextTick` into smooth 60 FPS frames | **99.0% Traffic Reduction** |
-| **Two-Way Input Stability** | View-layer overwrite causes cursor jumping | Value omitted from typing patches while honoring resets | **Zero Cursor Jump** |
-| **Memory Leak Resilience** | Bounded mobile RAM limits | 0 surviving surfaces/listeners across 200 creation-destruction cycles | **Zero Memory Leaks** |
-| **Data Mutation Pipeline Latency** | Frame budget `< 16.66 ms` for 60 FPS | **0.100 ms** per update (consumes only **0.60%** of frame budget) | **Sub-Millisecond** |
-| **State Mutation Throughput** | Support rapid gesture & stream updates | **2,500 ~ 104,000 ops/sec** across data mutation patterns | **High Throughput** |
+| **WXML DOM Nodes** | Warning threshold at `> 1,000` nodes | **25.4** average (Peak: **67** nodes) | Within Guideline |
+| **DOM Nesting Depth** | Warning threshold at `> 32` levels | **14** levels maximum | Within Guideline |
+| **Custom Component Count** | Minimize Shadow Root overhead | **1** root instance (`<a2ui-surface>`) via 5-level unrolling | Flat Hierarchy |
+| **`setData` Payload Size** | Recommended `< 50 KB`, limit `256 KB` | **60 ~ 300 Bytes** per delta patch | Within Guideline |
+| **Bridge Streaming Rate** | Avoid unbatched bridge saturation | Coalesced via `wx.nextTick` into 60 FPS frame rate | Coalesced |
+| **Input Cursor Stability** | Avoid view-layer overwrite jumping | Active input value skipped in typing patches | Protected |
+| **Lifecycle Cleanup** | Avoid memory leaks in long sessions | 0 surviving surfaces/listeners across 200 cycles | Clean Teardown |
+| **Logic Pipeline Latency** | Frame budget `< 16.66 ms` for 60 FPS | **~0.10 ms** on Apple M4 / **~0.50 ms** on virtualized CI | < 1 ms |
+| **Update Throughput** | Support rapid interaction & streaming | **2,500 ~ 100,000 ops/sec** across mutation patterns | High Throughput |
 
-### `setData` Bandwidth Optimization (Full AST vs Targeted Delta Patch)
+### `setData` Bandwidth Comparison (Full AST vs Differential Patch)
 
-| Scenario | Full AST Size | Delta Patch Size | Bandwidth Reduction |
+| Benchmark Scenario | Full AST Size | Delta Patch Size | Measured Reduction |
 | :--- | :--- | :--- | :--- |
-| **Streaming LLM Token Append** | `1,170 B` | `319 B` | **72.74%** |
+| **Streaming Token Append** | `1,170 B` | `319 B` | **72.74%** |
 | **Dynamic Price Update ($199.99 -> $99.99)** | `3,372 B` | `81 B` | **97.60%** |
 | **Form Validation State (Button Enable/Disable)** | `762 B` | `208 B` | **72.70%** |
 | **Incremental Array Item Append (15 -> 16 items)** | `4,019 B` | `279 B` | **93.06%** |
 
-### Per-Mutation Pipeline Phase Latency Breakdown (1,000 Iterations)
+### Logic Thread Pipeline Breakdown (1,000 Iteration Sample)
 
-| Pipeline Phase | Mean Latency | Percentage of 60 FPS Budget | Responsibilities |
+| Pipeline Phase | Measured Latency (Apple M4) | Percentage of 16.66ms Frame Budget | Description |
 | :--- | :--- | :--- | :--- |
-| **Phase 1: RFC 6901 `updateDataModel`** | `45.4 μs` (`0.045 ms`) | ~0.27% | Path parsing, prototype pollution defense, state write |
-| **Phase 2: `getRenderTree` AST Eval** | `44.6 μs` (`0.045 ms`) | ~0.27% | Dynamic scope resolution, `@call` functions, validation rules |
-| **Phase 3: `computeTreePatches` Diff** | `9.9 μs` (`0.010 ms`) | ~0.06% | Differential patch calculation, array prefix optimization |
-| **Phase 4: JSON Serialization** | `0.2 μs` (`0.000 ms`) | ~0.00% | Compact JSON stringification for JSBridge |
-| **Total Logic Thread Time** | **`100.2 μs` (`0.100 ms`)** | **`0.60%`** | **99.40% frame budget remaining for 60 FPS render** |
+| **1. RFC 6901 `updateDataModel`** | `45.4 μs` (`0.045 ms`) | ~0.27% | Path traversal, prototype pollution defense, state mutation |
+| **2. `getRenderTree` AST Evaluation** | `44.6 μs` (`0.045 ms`) | ~0.27% | Scope resolution, `@call` functions, validation rules |
+| **3. `computeTreePatches` Diff** | `9.9 μs` (`0.010 ms`) | ~0.06% | Tree diffing, active input handling, array prefix matching |
+| **4. JSON Stringification** | `0.2 μs` (`0.000 ms`) | ~0.00% | Serialization of patch payload for bridge transfer |
+| **Total Logic Thread Time** | **`100.2 μs` (`0.100 ms`)** | **`0.60%`** | **Leaves ample margin for native rendering on 60 FPS devices** |
 
-Run the full benchmark suite locally:
+To run benchmarks locally:
 ```bash
 npm run bench
 ```

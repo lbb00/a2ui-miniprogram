@@ -2,17 +2,16 @@
 
 [English](./) | 简体中文
 
-面向 [A2UI (Agent-to-User Interface)](https://github.com/a2ui-project/a2ui) 规范的高性能原生[微信小程序](https://developers.weixin.qq.com/miniprogram/dev/framework/)渲染器。专为移动端双线程架构、亚毫秒级状态更新与高压缩比 `setData` 通信量身打造。
+面向 [A2UI (Agent-to-User Interface)](https://github.com/a2ui-project/a2ui) 规范的原生[微信小程序](https://developers.weixin.qq.com/miniprogram/dev/framework/)渲染器，针对双线程通信与局部差量更新进行优化。
 
 <p align="center">
   <a href="https://www.npmjs.com/package/a2ui-miniprogram"><img src="https://img.shields.io/npm/v/a2ui-miniprogram.svg?style=flat-square&color=6a6eac" alt="npm version"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="license"/></a>
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-22%20%7C%2024-brightgreen.svg?style=flat-square" alt="node version"/></a>
   <a href="https://developers.weixin.qq.com/miniprogram/dev/framework/"><img src="https://img.shields.io/badge/%E5%BE%AE%E4%BF%A1%E5%B0%8F%E7%A8%8B%E5%BA%8F-%E2%89%A5%202.14.0-07c160.svg?style=flat-square" alt="wechat miniprogram"/></a>
-  <a href="https://github.com/a2ui-project/a2ui"><img src="https://img.shields.io/badge/A2UI%20%E8%A7%84%E8%8C%83-v1.0%20%E5%AE%8C%E5%85%A8%E5%AF%B9%E9%BD%90-10b981.svg?style=flat-square" alt="spec"/></a>
+  <a href="https://github.com/a2ui-project/a2ui"><img src="https://img.shields.io/badge/A2UI%20%E8%A7%84%E8%8C%83-v1.0-10b981.svg?style=flat-square" alt="spec"/></a>
   <a href="scripts/run-tests.js"><img src="https://img.shields.io/badge/tests-25%2F25%20passed-success.svg?style=flat-square" alt="tests"/></a>
-  <a href="scripts/benchmark-wechat-perf.js"><img src="https://img.shields.io/badge/setData%20%E5%B8%A6%E5%AE%BD%E7%BC%A9%E5%87%8F-%E6%9C%80%E9%AB%98%2097.6%25-blue.svg?style=flat-square" alt="setData reduction"/></a>
-  <a href="scripts/benchmark-wechat-perf.js"><img src="https://img.shields.io/badge/%E6%9B%B4%E6%96%B0%E6%B5%81%E6%B0%B4%E7%BA%BF%E8%80%97%E6%97%B6-0.10ms-brightgreen.svg?style=flat-square" alt="pipeline latency"/></a>
+  <a href="scripts/benchmark-wechat-perf.js"><img src="https://img.shields.io/badge/benchmarks-passing-blue.svg?style=flat-square" alt="benchmarks"/></a>
   <a href="miniprogram/index.d.ts"><img src="https://img.shields.io/badge/TypeScript-Ready-3178c6.svg?style=flat-square" alt="typescript"/></a>
 </p>
 
@@ -22,17 +21,16 @@
 
 ---
 
-## 核心特性与高性能优势
+## 核心特性
 
-- **亚毫秒级数据流水线**：单次数据变动（RFC 6901 指针更新 $\to$ AST 重估求值 $\to$ 局部差量 Diff）逻辑层全流程仅耗时 **~0.10 ms**，仅占用 60 FPS 帧预算（16.66ms）的 **0.60%**。
-- **高达 97.6% 的 `setData` 体积压缩**：通过精细化属性与数组下标级差量补丁算法（`computeTreePatches`），将全量 AST 传输体积从数 KB 压缩至几十字节。
-- **流式微任务合帧调度 (`wx.nextTick`)**：大模型打字机高频 chunk 吐字与渲染层无缝解耦，100 次高频微任务排放自动合成为单次 60 FPS 批量渲染，降低 **99%** 的通信桥堵塞。
-- **5 级模板展开（零组件冗余开销）**：0~4 级静态展开模板均编译为原生 WXML 节点，全树仅需 **1** 个根自定义组件实例（`<a2ui-surface>`），杜绝 Shadow DOM 内存膨胀，保持极浅的 DOM 深度（平均 25 节点，最大 14 层）。
-- **双向受控输入防跳光标**：定向差量补丁智能跳过当前聚焦输入框的 value 回写，彻底根除真机移动键盘打字时光标跳到末尾的顽疾，同时无缝支持 Agent 外部清空与程序化重置。
-- **A2UI v1.0 协议规范 100% 对齐**：完整支持 `createSurface`、`updateComponents`、`updateDataModel`、`deleteSurface` 以及端侧 RPC（`callRendererFunction`）。
-- **零内存泄漏高弹韧性**：经历 200 轮连续“创建-更新-销毁”生命周期压力测试后，残留实例与监听器为 0，GC 后堆内存零增量。
-- **全方位攻防加固**：防御 ReDoS 嵌套与固定次数正则回溯、严格阻断 `__proto__` / `constructor` 原型链污染、RFC 6901 严格数组索引校验、安全 Markdown 纯文本沙箱解析。
-- **优雅的扩展机制**：内置布局插槽（`header`、`footer`、`empty`）并支持基于微信官方抽象节点（`componentGenerics`）无缝渲染业务自定义图表、地图与复杂卡片。
+- **A2UI v1.0 规范对齐**：支持 `createSurface`、`updateComponents`、`updateDataModel`、`deleteSurface` 以及端侧 RPC（`callRendererFunction`）。
+- **局部差量更新**：`computeTreePatches` 提供精确到属性与数组下标级的补丁更新，减少 `setData` 序列化载荷（基准测试场景下较全量 AST 降低 70%~97%）。
+- **流式合帧调度**：基于 `wx.nextTick` 将高频打字机式的事件排放聚合成单帧更新，减轻通信桥堵塞。
+- **模版静态展开**：0~4 级静态模版全部编译为原生 WXML 标签，维持单根组件实例与扁平 DOM 深度（43 个官方规范用例中最大深度为 14 层）。
+- **受控输入体验保护**：敲键触发时自动避免重复回写当前活跃输入框的 value，缓解真机输入法光标跳跃问题，同时允许外部显式重置。
+- **资源清理**：组件 `detached` 生命周期内主动解绑引擎监听、定时器与状态引用，降低长会话内存残留。
+- **安全防护**：内置 ReDoS 正则防护（含嵌套与固定次数解析）、原型链污染阻断（`__proto__`、`constructor`）与安全 Markdown 解析。
+- **扩展支持**：内置外围布局插槽（`header`、`footer`、`empty`），并通过抽象节点（`componentGenerics`）支持业务定制图表、地图与复杂组件。
 
 ---
 
@@ -58,42 +56,52 @@ sequenceDiagram
 
 ---
 
-## 性能表现与微信小程序运行时基准
+## 性能表现与微信运行时基准
 
-A2UI 微信小程序渲染器专为手机端双线程执行模型（JSCore 逻辑层 vs WKWebView 渲染层）和微信 Exparser 组件系统量身优化。
+### 测试环境与评估方法
 
-### 微信官方规范合规打分卡
+以下基准数据基于运行 `npm run bench`（对应脚本 [`scripts/benchmark-wechat-perf.js`](file:///private/tmp/a2ui-miniprogram/scripts/benchmark-wechat-perf.js)），针对全部 43 个官方 A2UI 规范用例测得。
 
-| 评测维度 | 微信官方规范 / 性能红线 | A2UI 实测表现 | 合规结论 |
+- **测试硬件**：Apple M4（10 核 CPU，16 GB 统一内存）
+- **操作系统**：macOS Sequoia 15.x (Darwin 25.5.0 arm64)
+- **Node 环境**：Node.js v24.18.0 (V8 12.9) / CI 运行环境验证于 Node.js v22.x
+- **小程序基础库目标**：微信小程序基础库 $\ge$ 2.14.0
+- **组件仿真框架**：`miniprogram-simulate` v1.6.1（微信官方 Exparser 组件系统与模版编译仿真）
+
+> **关于移动端真机耗时的说明**：下方列出的逻辑流水线耗时为逻辑线程内的纯 CPU 计算耗时（指针寻址、AST 重估与 Diff 计算）。在移动端真机（iOS JSCore / Android V8）上，端到端渲染还包含跨进程 JSBridge 序列化与原生排版通信开销（通常视手机芯片与系统负载在 2~16 ms 之间）。
+
+### 微信官方规范参考打分卡
+
+| 评测维度 | 微信建议 / 限制参考 | 基准实测数据（43 个规范用例） | 状态 |
 | :--- | :--- | :--- | :--- |
-| **WXML DOM 节点总量** | 超过 `1,000` 节点触发告警 | 平均 **25.4** 节点/页（43 个官方用例峰值 **67** 节点） | **100% 合规（极优）** |
-| **DOM 嵌套深度** | 超过 `32` 层触发底层崩溃/警告 | 实测最大深度 **14** 层 | **100% 合规（极优）** |
-| **自定义组件实例开销** | 组件过多导致 Shadow Root 内存暴增 | **1** 个根组件实例（`<a2ui-surface>`），通过 5 级模版展开消除组件开销 | **极度扁平** |
-| **`setData` 传输体积** | 建议 `< 50 KB`，上限 `256 KB` | 局部差量补丁单次 **60 ~ 300 字节** | **最高节省 97.6%** |
-| **JSBridge 高频流式调度** | 避免频繁未合帧调用导致桥通信拥堵 | 基于 `wx.nextTick` 自动合帧至流畅 60 FPS 渲染 | **桥调用频次降低 99.0%** |
-| **受控输入稳定性** | 视图层反向覆盖导致光标跳位 | 敲键更新自动剔除 activeInput 补丁，同时支持程序化重置 | **零光标跳动** |
-| **长会话内存抗泄漏** | 手机端内存超限会被微信强制关闭 | 200 轮全生命周期循环后存活实例与监听器均为 0 | **零内存泄漏** |
-| **Data 变换逻辑流水线耗时** | 60 FPS 要求单帧总预算 `< 16.66 ms` | **0.100 ms**（逻辑层全流程仅消耗 **0.60%** 帧预算） | **亚毫秒级** |
-| **状态更新吞吐量** | 支持高频手势与复杂流式更新 | 不同变异模式下吞吐量达 **2,500 ~ 104,000 ops/sec** | **极高吞吐** |
+| **WXML DOM 节点总量** | 建议单页 `< 1,000` 节点 | 平均 **25.4** 节点/页（峰值 **67** 节点） | 在建议范围内 |
+| **DOM 嵌套深度** | 建议单页 `< 32` 层 | 实测最大深度 **14** 层 | 在建议范围内 |
+| **自定义组件实例开销** | 避免过度嵌套产生 Shadow Root 冗余 | **1** 个根组件实例（`<a2ui-surface>`，5 级模版展开） | 扁平层级 |
+| **`setData` 传输体积** | 建议单次 `< 50 KB`，上限 `256 KB` | 局部差量补丁单次约 **60 ~ 300 字节** | 明显优化 |
+| **通信桥流式调度** | 避免未合帧高频调用堵塞通信桥 | 基于 `wx.nextTick` 合帧至 60 FPS 帧率 | 已做合帧 |
+| **输入框光标稳定性** | 避免逻辑层回写冲刷导致光标跳动 | 敲键更新自动跳过当前激活输入框补丁 | 已做保护 |
+| **生命周期资源回收** | 避免长会话持续累积内存 | 200 轮循环后残留实例与监听器均为 0 | 清理正常 |
+| **逻辑流水线计算耗时** | 60 FPS 单帧预算为 `16.66 ms` | Apple M4 上约 **0.10 ms** / 虚拟化 CI 上约 **0.50 ms** | < 1 ms |
+| **更新处理吞吐量** | 支撑流式吐字与频繁交互 | 不同变异模式下约 **2,500 ~ 100,000 ops/sec** | 吞吐充裕 |
 
 ### `setData` 通信带宽优化（全量 AST vs 差量 Patch）
 
-| 典型交互场景 | 全量 AST 大小 | 差量补丁大小 | 带宽降低幅度 |
+| 典型交互场景 | 全量 AST 大小 | 差量补丁大小 | 实测降低幅度 |
 | :--- | :--- | :--- | :--- |
 | **大模型流式打字追加 Token** | `1,170 B` | `319 B` | **72.74%** |
 | **动态价格变动 ($199.99 -> $99.99)** | `3,372 B` | `81 B` | **97.60%** |
 | **表单校验状态切换 (按钮禁用/启用)** | `762 B` | `208 B` | **72.70%** |
 | **动态列表项追加 (15 -> 16 项)** | `4,019 B` | `279 B` | **93.06%** |
 
-### 单次 Data 变动更新流水线耗时分解（1,000 次实测均值）
+### 单次数据变动逻辑流水线耗时分解（1,000 次采样均值）
 
-| 流水线执行阶段 | 平均耗时 | 占用 60 FPS 帧预算比例 | 主要职责 |
+| 流水线执行阶段 | 实测耗时（Apple M4） | 占 16.66ms 帧预算比例 | 说明 |
 | :--- | :--- | :--- | :--- |
-| **第 1 阶段：RFC 6901 `updateDataModel`** | `45.4 μs` (`0.045 ms`) | ~0.27% | 路径分词解析、防原型污染过滤、数据写入 |
-| **第 2 阶段：`getRenderTree` AST 重算** | `44.6 μs` (`0.045 ms`) | ~0.27% | 动态作用域解析、15 类 `@call` 内置函数求值、校验规则链 |
-| **第 3 阶段：`computeTreePatches` Diff** | `9.9 μs` (`0.010 ms`) | ~0.06% | 局部差量补丁计算、光标保护、数组前缀优化 |
-| **第 4 阶段：JSON 序列化** | `0.2 μs` (`0.000 ms`) | ~0.00% | 生成紧凑补丁字典供 JSBridge 发送 |
-| **逻辑线程全流程总耗时** | **`100.2 μs` (`0.100 ms`)** | **`0.60%`** | **为视图层预留 99.40% 的 60 FPS 渲染预算** |
+| **1. RFC 6901 `updateDataModel`** | `45.4 μs` (`0.045 ms`) | ~0.27% | 路径寻址、原型链过滤与数据写入 |
+| **2. `getRenderTree` AST 重算** | `44.6 μs` (`0.045 ms`) | ~0.27% | 动态作用域解析、`@call` 函数求值、校验规则链 |
+| **3. `computeTreePatches` Diff** | `9.9 μs` (`0.010 ms`) | ~0.06% | 差量补丁计算、输入状态保护、数组前缀匹配 |
+| **4. JSON 序列化准备** | `0.2 μs` (`0.000 ms`) | ~0.00% | 补丁数据准备供通信桥发送 |
+| **逻辑线程全流程总耗时** | **`100.2 μs` (`0.100 ms`)** | **`0.60%`** | **为视图层真机渲染预留充足预算** |
 
 在本地执行基准测试套件：
 ```bash
