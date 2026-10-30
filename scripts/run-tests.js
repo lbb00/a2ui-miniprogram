@@ -41,6 +41,7 @@ const TEST_SUITES = [
 
   // 5. Rendering architecture, performance and visual specs
   'performance-architecture.test.js',
+  'wechat-runtime-performance.test.js',
   'visual-parity.test.js',
   'style/wxss-rules.test.js',
 

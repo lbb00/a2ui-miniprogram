@@ -17,6 +17,7 @@
     "test:simulate": "node tests/e2e/simulate-component-e2e.test.js",
     "test:perf": "node scripts/run-tests.js --perf",
     "test:style": "node scripts/run-tests.js --style",
+    "bench": "node --expose-gc scripts/benchmark-wechat-perf.js",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
     "changeset": "changeset",
