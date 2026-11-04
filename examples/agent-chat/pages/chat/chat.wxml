@@ -1,0 +1,122 @@
+<view class="chat-container">
+  <!-- 顶部状态栏 -->
+  <view class="chat-header">
+    <view class="agent-status-badge">
+      <view class="status-dot {{agentState !== 'idle' ? 'busy' : 'online'}}"></view>
+      <text class="status-text">{{agentStateText}}</text>
+    </view>
+    <view class="header-actions">
+      <button class="header-btn" bindtap="clearChat" hover-class="btn-hover">
+        <text class="btn-icon">🧹</text> 清空
+      </button>
+    </view>
+  </view>
+
+  <!-- 快捷提示词芯片栏 -->
+  <scroll-view class="chips-scroll" scroll-x="true" enable-flex="true" show-scrollbar="false">
+    <view 
+      class="chip-item" 
+      wx:for="{{quickPrompts}}" 
+      wx:key="text" 
+      data-text="{{item.text}}" 
+      bindtap="onChipTap"
+      hover-class="chip-hover"
+    >
+      <text class="chip-icon">{{item.icon}}</text>
+      <text class="chip-text">{{item.label}}</text>
+    </view>
+  </scroll-view>
+
+  <!-- 消息滚动流 -->
+  <scroll-view 
+    class="messages-scroll" 
+    scroll-y="true" 
+    scroll-into-view="{{scrollToView}}" 
+    scroll-top="{{scrollTop}}"
+    scroll-with-animation="{{scrollWithAnimation}}"
+    enhanced="true"
+    show-scrollbar="false"
+  >
+    <view class="messages-list">
+      <block wx:for="{{messages}}" wx:key="id">
+        <!-- 1. 用户消息 -->
+        <view class="msg-row msg-user" id="{{item.id}}" wx:if="{{item.role === 'user'}}">
+          <view class="msg-bubble user-bubble">
+            <text class="user-text" user-select="true">{{item.content}}</text>
+          </view>
+          <view class="avatar user-avatar">
+            <text class="avatar-icon">👤</text>
+          </view>
+        </view>
+
+        <!-- 2. 操作反馈胶囊 -->
+        <view class="msg-row msg-action" id="{{item.id}}" wx:elif="{{item.role === 'action'}}">
+          <text class="action-pill">{{item.content}}</text>
+        </view>
+
+        <!-- 3. Assistant 智能体消息 -->
+        <view class="msg-row msg-assistant" id="{{item.id}}" wx:elif="{{item.role === 'assistant'}}">
+          <view class="avatar agent-avatar">
+            <text class="avatar-icon">🤖</text>
+          </view>
+          <view class="agent-content-col">
+            <!-- 思考状态 -->
+            <view class="thinking-box" wx:if="{{item.thinking}}">
+              <view class="thinking-spinner" wx:if="{{item.isStreaming}}"></view>
+              <text class="thinking-text">{{item.thinking}}</text>
+            </view>
+
+            <!-- 文本回复泡泡 -->
+            <view class="msg-bubble agent-bubble" wx:if="{{item.content}}">
+              <text class="agent-text" user-select="true">{{item.content}}</text>
+              <text class="typing-cursor" wx:if="{{item.isStreaming}}">▍</text>
+            </view>
+
+            <!-- A2UI 原生卡片：由卡片布局直接解释内容，移除冗余外围标签 -->
+            <view class="a2ui-card-wrapper" wx:if="{{item.surfaceId && item.renderTree}}">
+              <a2ui-surface 
+                surfaceId="{{item.surfaceId}}"
+                renderTree="{{item.renderTree}}"
+                bind:rendered="onCardRendered"
+                bind:action="onA2UIAction"
+                bind:inputChange="onA2UIInput"
+              />
+            </view>
+          </view>
+        </view>
+      </block>
+      <view id="scroll_bottom" class="scroll-bottom-anchor"></view>
+    </view>
+  </scroll-view>
+
+  <!-- 底部输入栏：输入框贴底 + 键盘抬起时间动画与安全区适配 -->
+  <view 
+    class="chat-input-bar" 
+    style="margin-bottom: {{keyboardHeight}}px; transition: margin-bottom {{keyboardDuration}}s cubic-bezier(0.25, 0.1, 0.25, 1); padding-bottom: {{keyboardHeight > 0 ? '16rpx' : 'calc(16rpx + env(safe-area-inset-bottom))'}};"
+  >
+    <view class="input-wrapper">
+      <input 
+        class="chat-input" 
+        placeholder="{{agentState === 'idle' ? '输入消息...' : '思考中...'}}" 
+        value="{{inputText}}" 
+        disabled="{{agentState !== 'idle'}}"
+        confirm-type="send"
+        adjust-position="{{false}}"
+        cursor-spacing="16"
+        bindinput="onInputTyping"
+        bindconfirm="onSend"
+        bindfocus="onInputFocus"
+        bindblur="onInputBlur"
+        bindkeyboardheightchange="onKeyboardHeightChange"
+      />
+    </view>
+    <button 
+      class="send-btn {{!inputText.trim() || agentState !== 'idle' ? 'disabled' : ''}}" 
+      bindtap="onSend" 
+      disabled="{{!inputText.trim() || agentState !== 'idle'}}"
+      hover-class="send-btn-hover"
+    >
+      <text class="send-text">发送</text>
+    </button>
+  </view>
+</view>

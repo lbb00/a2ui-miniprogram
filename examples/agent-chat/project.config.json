@@ -1,0 +1,13 @@
+{
+  "compileType": "miniprogram",
+  "projectname": "agent-miniprogram",
+  "description": "Independent Agent MiniProgram Powered by a2ui-miniprogram Module",
+  "appid": "touristappid",
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "urlCheck": false
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "A2UI 智能 Agent",
+  "navigationBarBackgroundColor": "#4f46e5",
+  "navigationBarTextStyle": "white",
+  "enablePullDownRefresh": false,
+  "usingComponents": {
+    "a2ui-surface": "a2ui-miniprogram/components/a2ui-surface/a2ui-surface"
+  }
+}

@@ -1,0 +1,8 @@
+node_modules/
+miniprogram_npm/
+.DS_Store
+*.log
+.claude/
+artifacts/
+project.private.config.json
+.system_generated/

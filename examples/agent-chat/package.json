@@ -1,0 +1,21 @@
+{
+  "name": "a2ui-example-agent-chat",
+  "version": "1.0.0",
+  "description": "A2UI Native Agent Chat Mini Program Example",
+  "main": "app.js",
+  "scripts": {
+    "test": "node tests/agent.test.js && node tests/test-all-deepseek-cases.js",
+    "test:automator": "node tests/automator.test.js && node tests/test-continuous-scroll.js",
+    "test:all": "npm test && npm run test:automator",
+    "build:npm": "node scripts/build-npm.js",
+    "lint": "oxlint"
+  },
+  "dependencies": {
+    "a2ui-miniprogram": "file:../.."
+  },
+  "engines": {
+    "node": "^22.0.0 || ^24.0.0"
+  },
+  "author": "lbb00 <mr@lbb00.com>",
+  "license": "MIT"
+}

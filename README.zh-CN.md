@@ -216,6 +216,9 @@ Page({
 });
 ```
 
+> [!TIP]
+> 完整可运行的独立 AI 对话小程序示例，请参阅 [examples/agent-chat](examples/agent-chat/)（涵盖大模型 Function Calling 意图直出、A2UI 双向交互闭环与原生贴底平滑滚动）。
+
 ---
 
 ## 支持组件清单
