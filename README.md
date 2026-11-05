@@ -215,6 +215,9 @@ Page({
 });
 ```
 
+> [!TIP]
+> For a complete runnable standalone AI chat miniprogram example, see [examples/agent-chat](examples/agent-chat/) (featuring LLM Function Calling, A2UI bidirectional action loops, and native keyboard/scrolling synchronization).
+
 ---
 
 ## Supported Components
