@@ -23,6 +23,10 @@ Page({
     this.initAgent();
   },
 
+  onReady() {
+    this.attachEngineToSurfaces();
+  },
+
   onUnload() {
     if (this._multiScrollTimers) {
       this._multiScrollTimers.forEach((t) => clearTimeout(t));
@@ -34,6 +38,7 @@ Page({
     this.agent = new AgentLoop({
       onMessageUpdate: (messages) => {
         this.setData({ messages }, () => {
+          this.attachEngineToSurfaces();
           this.scheduleAutoScroll();
         });
       },
@@ -102,11 +107,39 @@ Page({
 
   /**
    * 监听 a2ui-surface 组件内部渲染就绪事件 (bind:rendered)
-   * 当卡片 DOM 节点与样式在小程序底层展开时触发，校准滚动位置
+   * 当卡片 DOM 节点与样式在小程序底层展开时触发，挂载 Agent 共享引擎并校准滚动位置
    */
-  onCardRendered() {
+  onCardRendered(e) {
+    const surfaceId = e && e.detail && e.detail.surfaceId;
+    this.attachEngineToSurfaces(surfaceId);
     this.scrollToBottom(true);
     this.scheduleMultiTickScroll();
+  },
+
+  /**
+   * 将 AgentLoop 的共享 A2UIEngine 实例挂载到已渲染的 surface 组件上
+   * 确保卡片内的按钮动作派发与数据模型双向绑定正常解析
+   */
+  attachEngineToSurfaces(targetSurfaceId) {
+    if (!this.agent || !this.agent.engine) return;
+
+    if (targetSurfaceId && typeof this.selectComponent === 'function') {
+      const comp = this.selectComponent('#' + targetSurfaceId);
+      if (comp && typeof comp.setEngine === 'function' && comp.engine !== this.agent.engine) {
+        comp.setEngine(this.agent.engine);
+      }
+    }
+
+    if (typeof this.selectAllComponents === 'function') {
+      const allComps = this.selectAllComponents('.chat-surface-card');
+      if (allComps && allComps.length > 0) {
+        allComps.forEach((comp) => {
+          if (comp && typeof comp.setEngine === 'function' && comp.engine !== this.agent.engine) {
+            comp.setEngine(this.agent.engine);
+          }
+        });
+      }
+    }
   },
 
   /**

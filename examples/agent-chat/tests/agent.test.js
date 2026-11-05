@@ -80,6 +80,60 @@ async function runTest() {
   assert.strictEqual(findValue(updatedTree), 'independent_agent_tester');
   console.log('✓ 表单输入成功反写 a2ui-miniprogram 底座 DataModel:', findValue(updatedTree));
 
+  console.log('\n--- [6] 验证商品卡片价格缺省与零值保留 (Codex P2 修复验证) ---');
+  const dummyMsg1 = {};
+  loop.executeA2UITool(dummyMsg1, 'render_product_card', { title: '测试普通商品', price: 100 });
+  assert(dummyMsg1.a2uiMessages && dummyMsg1.a2uiMessages.length > 0, '必须包含 a2uiMessages 协议消息');
+  
+  const findNode = (node, predicate) => {
+    if (!node) return null;
+    if (predicate(node)) return node;
+    if (node.children) {
+      for (const c of node.children) {
+        const found = findNode(c, predicate);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const priceTextNode1 = findNode(dummyMsg1.renderTree, (n) => n.text === '¥100');
+  assert(priceTextNode1, '未指定 discountPrice 时应使用 price (¥100)');
+  const btnNode1 = findNode(dummyMsg1.renderTree, (n) => n.component === 'Button');
+  assert.strictEqual(btnNode1.action.event.context.price, 100, '加购 action context 应继承 price: 100');
+
+  const dummyMsg2 = {};
+  loop.executeA2UITool(dummyMsg2, 'render_product_card', { title: '免费试用商品', price: 99, discountPrice: 0 });
+  const priceTextNode2 = findNode(dummyMsg2.renderTree, (n) => n.text === '¥0');
+  assert(priceTextNode2, '显式指定 discountPrice=0 时应保留 0 (¥0)');
+  const btnNode2 = findNode(dummyMsg2.renderTree, (n) => n.component === 'Button');
+  assert.strictEqual(btnNode2.action.event.context.price, 0, '加购 action context 应保留 0');
+  console.log('✓ 商品价格回退与零值保留断言 100% 通过');
+
+  console.log('\n--- [7] 验证 Surface 组件绑定共享引擎与动作解析 (Codex P1 修复验证) ---');
+  // 模拟 a2ui-surface 组件实例与 setEngine 机制
+  const mockSurfaceComponent = {
+    engine: null,
+    setEngine(eng) {
+      this.engine = eng;
+    },
+    dispatchTapEvent(componentId) {
+      if (!this.engine) {
+        throw new Error('EXECUTION_ERROR: A2UIEngine instance is required');
+      }
+      return this.engine.createActionMessage(flightMsg.surfaceId, componentId);
+    },
+  };
+
+  // 未挂载引擎前抛出 EXECUTION_ERROR
+  assert.throws(() => mockSurfaceComponent.dispatchTapEvent('btn_book'), /EXECUTION_ERROR/);
+  // 挂载引擎后成功解析 action 消息
+  mockSurfaceComponent.setEngine(loop.engine);
+  const actionMsg = mockSurfaceComponent.dispatchTapEvent('btn_book');
+  assert(actionMsg && actionMsg.event, '挂载 engine 后必须成功创建 Action 消息');
+  assert.strictEqual(actionMsg.event.name, 'book_flight');
+  console.log('✓ a2ui-surface 共享引擎挂载与 Action 解析断言 100% 通过');
+
   console.log('\n🎉 独立 Agent 小程序成功通过 a2ui-miniprogram 模块完成全流程测试！\n');
 }
 

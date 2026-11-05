@@ -120,6 +120,9 @@ class AgentLoop {
   }
 
   clearHistory() {
+    if (this.engine && typeof this.engine.clear === 'function') {
+      this.engine.clear();
+    }
     this.initWelcomeMessage();
   }
 
@@ -349,8 +352,8 @@ class AgentLoop {
       ];
     } else if (toolName === 'render_product_card') {
       const title = args.title || 'Sony WH-1000XM5 无线降噪耳机';
-      const _price = args.price || 2499;
-      const discount = args.discountPrice || 1999;
+      const price = args.price !== undefined ? args.price : 2499;
+      const discount = args.discountPrice !== undefined ? args.discountPrice : price;
 
       a2uiMessages = [
         { version: 'v1.0', createSurface: { surfaceId } },
@@ -363,7 +366,7 @@ class AgentLoop {
               { id: 'p_col', component: 'Column', children: ['p_title', 'p_row', 'p_btn'] },
               { id: 'p_title', component: 'Text', text: title, variant: 'title' },
               { id: 'p_row', component: 'Row', justify: 'spaceBetween', children: ['p_label', 'p_price'] },
-              { id: 'p_label', component: 'Text', text: '限时特惠价' },
+              { id: 'p_label', component: 'Text', text: args.discountPrice !== undefined ? '限时特惠价' : '商品售价' },
               { id: 'p_price', component: 'Text', text: `¥${discount}`, variant: 'title' },
               {
                 id: 'p_btn',
@@ -427,6 +430,7 @@ class AgentLoop {
       if (renderTree) {
         msg.surfaceId = surfaceId;
         msg.renderTree = renderTree;
+        msg.a2uiMessages = a2uiMessages;
       }
     }
   }
