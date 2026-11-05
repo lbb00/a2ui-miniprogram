@@ -221,6 +221,34 @@ async function runTest() {
   assert.strictEqual(guardLoop.getMessages().length, beforeCount, '忙碌状态下必须直接拦截并忽略卡片动作');
   console.log('✓ Agent 忙碌保护拦截断言 100% 通过');
 
+  console.log('\n--- [12] 验证 API 请求超时强制终止与降级 (Codex Timeout 修复验证) ---');
+  const http = require('http');
+  const stallServer = http.createServer((_req, _res) => {
+    // 故意挂起，永不响应
+  });
+  await new Promise((resolve) => stallServer.listen(0, resolve));
+  const stallPort = stallServer.address().port;
+
+  const timeoutLoop = new AgentLoop({
+    config: {
+      mode: 'api',
+      apiKey: 'test-timeout-key',
+      apiUrl: `http://127.0.0.1:${stallPort}/chat/completions`,
+      timeout: 150, // 150ms 超时强制退出
+    },
+  });
+
+  const startT = Date.now();
+  await timeoutLoop.sendMessage('挂起测试');
+  const elapsed = Date.now() - startT;
+  stallServer.close();
+
+  assert(elapsed < 2000, `必须在设定超时时间内强制退出降级 (实际耗时: ${elapsed}ms)`);
+  const finalMsgs = timeoutLoop.getMessages();
+  const timeoutMsg = finalMsgs.find((m) => m.content && m.content.includes('超时'));
+  assert(timeoutMsg, '必须捕获并记录请求超时提示');
+  console.log(`✓ 请求在 ${elapsed}ms 内成功触发超时机制并自动降级`);
+
   console.log('\n🎉 独立 Agent 小程序成功通过 a2ui-miniprogram 模块完成全流程测试！\n');
 }
 

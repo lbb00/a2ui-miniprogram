@@ -211,48 +211,65 @@ class AgentLoop {
 
     try {
       let responseData = null;
+      const timeoutMs = this.config.timeout || 10000;
 
       if (typeof wx !== 'undefined' && wx.request) {
         // 微信小程序环境：通过 wx.request 发起调用
         responseData = await new Promise((resolve, reject) => {
+          let timer = null;
           const reqTask = wx.request({
             url: this.config.apiUrl,
             method: 'POST',
+            timeout: timeoutMs,
             header: {
               'Content-Type': 'application/json',
               Authorization: `Bearer ${this.config.apiKey}`,
             },
             data: payload,
             success: (res) => {
+              if (timer) clearTimeout(timer);
               if (res.statusCode >= 200 && res.statusCode < 300) {
                 resolve(res.data);
               } else {
                 reject(new Error(`DeepSeek API 状态码 ${res.statusCode}: ${JSON.stringify(res.data)}`));
               }
             },
-            fail: reject,
+            fail: (err) => {
+              if (timer) clearTimeout(timer);
+              reject(err);
+            },
           });
+          timer = setTimeout(() => {
+            try {
+              if (typeof reqTask.abort === 'function') reqTask.abort();
+            } catch (_) {}
+            reject(new Error(`DeepSeek API 请求超时 (${timeoutMs}ms)`));
+          }, timeoutMs);
           this._activeRequest = reqTask;
         });
       } else if (https) {
         // Node.js 自动化测试与 CI 环境
         responseData = await new Promise((resolve, reject) => {
+          let timer = null;
           const urlObj = new URL(this.config.apiUrl);
-          const req = https.request(
+          const reqModule = urlObj.protocol === 'http:' ? require('http') : https;
+          const req = reqModule.request(
             {
               hostname: urlObj.hostname,
-              port: urlObj.port || 443,
+              port: urlObj.port || (urlObj.protocol === 'http:' ? 80 : 443),
               path: urlObj.pathname,
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${this.config.apiKey}`,
               },
+              timeout: timeoutMs,
             },
             (res) => {
               let body = '';
               res.on('data', (d) => (body += d));
               res.on('end', () => {
+                if (timer) clearTimeout(timer);
                 try {
                   resolve(JSON.parse(body));
                 } catch (_e) {
@@ -261,7 +278,20 @@ class AgentLoop {
               });
             }
           );
-          req.on('error', reject);
+          req.on('timeout', () => {
+            if (timer) clearTimeout(timer);
+            req.destroy(new Error(`DeepSeek API 请求超时 (${timeoutMs}ms)`));
+          });
+          req.on('error', (err) => {
+            if (timer) clearTimeout(timer);
+            reject(err);
+          });
+          timer = setTimeout(() => {
+            try {
+              req.destroy(new Error(`DeepSeek API 请求超时 (${timeoutMs}ms)`));
+            } catch (_) {}
+            reject(new Error(`DeepSeek API 请求超时 (${timeoutMs}ms)`));
+          }, timeoutMs);
           req.write(JSON.stringify(payload));
           req.end();
           this._activeRequest = req;
