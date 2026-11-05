@@ -10,18 +10,21 @@ const path = require('path');
 const srcDir = path.resolve(__dirname, '../../../miniprogram');
 const targetDir = path.resolve(__dirname, '../miniprogram_npm/a2ui-miniprogram');
 
-function copyRecursive(src, dest) {
+function copyRecursive(src, dest, ignoreNames = []) {
   if (!fs.existsSync(dest)) {
     fs.mkdirSync(dest, { recursive: true });
   }
 
   const entries = fs.readdirSync(src, { withFileTypes: true });
   for (const entry of entries) {
+    if (ignoreNames.includes(entry.name)) {
+      continue;
+    }
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
 
     if (entry.isDirectory()) {
-      copyRecursive(srcPath, destPath);
+      copyRecursive(srcPath, destPath, ignoreNames);
     } else {
       fs.copyFileSync(srcPath, destPath);
     }
@@ -45,8 +48,21 @@ try {
   fs.symlinkSync(pkgDir, nodeModuleTarget, 'dir');
   console.log(`🔗 成功软链 node_modules/a2ui-miniprogram -> ${pkgDir}`);
 } catch (e) {
-  copyRecursive(pkgDir, nodeModuleTarget);
-  console.log('📁 拷贝 node_modules/a2ui-miniprogram 完成');
+  // 降级拷贝：仅拷贝 package.json 声明的分发文件，严格排除递归拷贝到自身以及 node_modules/examples 目录
+  const distFiles = ['miniprogram', 'index.js', 'package.json', 'README.md'];
+  fs.mkdirSync(nodeModuleTarget, { recursive: true });
+  for (const item of distFiles) {
+    const s = path.join(pkgDir, item);
+    const d = path.join(nodeModuleTarget, item);
+    if (fs.existsSync(s)) {
+      if (fs.statSync(s).isDirectory()) {
+        copyRecursive(s, d, ['node_modules', 'miniprogram_npm', '.git']);
+      } else {
+        fs.copyFileSync(s, d);
+      }
+    }
+  }
+  console.log('📁 拷贝 node_modules/a2ui-miniprogram 完成 (仅包含分发产物，排除递归嵌套)');
 }
 
 console.log('✅ 构建 npm 完成！');

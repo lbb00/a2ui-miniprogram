@@ -134,6 +134,39 @@ async function runTest() {
   assert.strictEqual(actionMsg.event.name, 'book_flight');
   console.log('✓ a2ui-surface 共享引擎挂载与 Action 解析断言 100% 通过');
 
+  console.log('\n--- [8] 验证多工具调用保留独立卡片 (Codex 多 Tool Calls 修复验证) ---');
+  const multiLoop = new AgentLoop();
+  const baseAgentMsg = {
+    id: 'msg_agent_test',
+    role: 'assistant',
+    content: '已为您查询航班与耳机：',
+    timestamp: Date.now(),
+  };
+  multiLoop.messages.push(baseAgentMsg);
+
+  const toolCalls = [
+    { name: 'render_flight_card', args: { flightNumber: 'CA1501' } },
+    { name: 'render_product_card', args: { title: 'Sony WH-1000XM5', price: 1999 } },
+  ];
+  for (let i = 0; i < toolCalls.length; i++) {
+    let target = baseAgentMsg;
+    if (i > 0 || target.surfaceId) {
+      target = {
+        id: 'msg_agent_test_' + i,
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+      };
+      multiLoop.messages.push(target);
+    }
+    multiLoop.executeA2UITool(target, toolCalls[i].name, toolCalls[i].args);
+  }
+
+  const msgsWithCards = multiLoop.getMessages().filter((m) => m.surfaceId && m.renderTree);
+  assert.strictEqual(msgsWithCards.length, 2, '两个工具调用应生成两个独立的消息卡片');
+  assert.notStrictEqual(msgsWithCards[0].surfaceId, msgsWithCards[1].surfaceId, '两张卡片应拥有不同的 surfaceId');
+  console.log('✓ 多 Tool Calls 分别保留独立卡片验证通过');
+
   console.log('\n🎉 独立 Agent 小程序成功通过 a2ui-miniprogram 模块完成全流程测试！\n');
 }
 

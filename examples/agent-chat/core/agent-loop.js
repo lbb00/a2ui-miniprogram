@@ -259,7 +259,8 @@ class AgentLoop {
 
       // 处理 Tool Calls
       if (message.tool_calls && message.tool_calls.length > 0) {
-        for (const toolCall of message.tool_calls) {
+        for (let i = 0; i < message.tool_calls.length; i++) {
+          const toolCall = message.tool_calls[i];
           const toolName = toolCall.function?.name;
           let args = {};
           try {
@@ -267,11 +268,24 @@ class AgentLoop {
           } catch (_) {}
 
           this.setState('tool_executing');
-          agentMsg.thinking = `🛠️ 触发工具调用: ${toolName}(${JSON.stringify(args)})`;
+
+          // 为每个独立的工具调用保留/追加独立的 assistant 消息卡片，避免多卡片互相覆盖
+          let targetMsg = agentMsg;
+          if (i > 0 || targetMsg.surfaceId) {
+            targetMsg = {
+              id: 'msg_agent_' + Date.now() + '_' + i,
+              role: 'assistant',
+              content: '',
+              timestamp: Date.now(),
+            };
+            this.messages.push(targetMsg);
+          }
+
+          targetMsg.thinking = `🛠️ 触发工具调用: ${toolName}(${JSON.stringify(args)})`;
           this.notifyUpdate();
 
           // 执行 A2UI 工具调用并即时通知渲染树更新
-          this.executeA2UITool(agentMsg, toolName, args);
+          this.executeA2UITool(targetMsg, toolName, args);
           this.notifyUpdate();
         }
 
@@ -293,7 +307,7 @@ class AgentLoop {
    * 执行 Tool Call 生成 A2UI 规范并调用 a2ui-miniprogram 编译为渲染树
    */
   executeA2UITool(msg, toolName, args) {
-    const surfaceId = `surface_${toolName}_${Date.now()}`;
+    const surfaceId = `surface_${toolName}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     let a2uiMessages = [];
 
     if (toolName === 'render_flight_card') {

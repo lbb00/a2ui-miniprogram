@@ -80,7 +80,6 @@
                 data-surface-id="{{item.surfaceId}}"
                 surfaceId="{{item.surfaceId}}"
                 renderTree="{{item.renderTree}}"
-                messages="{{item.a2uiMessages}}"
                 bind:rendered="onCardRendered"
                 bind:action="onA2UIAction"
                 bind:inputChange="onA2UIInput"
