@@ -209,6 +209,18 @@ async function runTest() {
   assert.strictEqual(failedApiMsg.thinking, '', '降级原消息必须清空 thinking 避免永久转圈');
   console.log('✓ API 降级时原消息终态化与 spinner 正常清理');
 
+  console.log('\n--- [11] 验证 Agent 忙碌时拦截卡片 Action (Codex 并发 Action 保护验证) ---');
+  const guardLoop = new AgentLoop();
+  guardLoop.state = 'streaming';
+  const beforeCount = guardLoop.getMessages().length;
+  await guardLoop.handleA2UIAction({
+    surfaceId: 'any_surface',
+    componentId: 'btn',
+    actionName: 'book_flight',
+  });
+  assert.strictEqual(guardLoop.getMessages().length, beforeCount, '忙碌状态下必须直接拦截并忽略卡片动作');
+  console.log('✓ Agent 忙碌保护拦截断言 100% 通过');
+
   console.log('\n🎉 独立 Agent 小程序成功通过 a2ui-miniprogram 模块完成全流程测试！\n');
 }
 

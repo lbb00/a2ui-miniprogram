@@ -224,6 +224,10 @@ Page({
    */
   onA2UIAction(e) {
     console.log('[Agent App] 捕获 a2ui-surface Action 事件:', e.detail);
+    if (this.data.agentState !== 'idle') {
+      console.warn('[Agent App] Agent 当前处于忙碌状态，忽略卡片动作触发');
+      return;
+    }
     if (this.agent) {
       this.agent.handleA2UIAction(e.detail);
     }

@@ -131,6 +131,12 @@ class AgentLoop {
       } catch (_) {}
       this._activeRequest = null;
     }
+    for (const m of this.messages) {
+      if (m.isStreaming) {
+        m.isStreaming = false;
+        m.thinking = '';
+      }
+    }
     if (this.engine && typeof this.engine.clear === 'function') {
       this.engine.clear();
     }
@@ -534,7 +540,7 @@ class AgentLoop {
   }
 
   async handleA2UIAction(detail) {
-    if (!detail) return;
+    if (!detail || this.state !== 'idle') return;
     const currentGen = ++this.generationId;
     const { surfaceId, componentId: _componentId, action, eventMessage } = detail;
     const eventName =
