@@ -167,6 +167,48 @@ async function runTest() {
   assert.notStrictEqual(msgsWithCards[0].surfaceId, msgsWithCards[1].surfaceId, '两张卡片应拥有不同的 surfaceId');
   console.log('✓ 多 Tool Calls 分别保留独立卡片验证通过');
 
+  console.log('\n--- [9] 验证清空对话时取消并拦截未完成的异步任务 (Codex 取消任务修复验证) ---');
+  const cancelLoop = new AgentLoop();
+  // 触发一个卡片 action，内部有 300ms delay
+  const dummySurface = 'surface_flight_cancel_test';
+  cancelLoop.engine.process([
+    { version: 'v1.0', createSurface: { surfaceId: dummySurface } },
+    { version: 'v1.0', updateComponents: { surfaceId: dummySurface, components: [{ id: 'root', component: 'Card' }, { id: 'btn', component: 'Button', text: '按钮', action: { event: { name: 'book_flight' } } }] } },
+  ]);
+  const actionPromise = cancelLoop.handleA2UIAction({
+    surfaceId: dummySurface,
+    componentId: 'btn',
+    actionName: 'book_flight',
+  });
+  // 50ms 后用户点击清空
+  await new Promise((r) => setTimeout(r, 50));
+  cancelLoop.clearHistory();
+  assert.strictEqual(cancelLoop.getMessages().length, 1, '清空后应仅有欢迎卡片');
+  assert.strictEqual(cancelLoop.state, 'idle', '清空后状态必须强制重置为 idle');
+  // 等待原 action 完成其延迟
+  await actionPromise;
+  // 断言未完成的旧 action 没有污染新清空的对话
+  assert.strictEqual(cancelLoop.getMessages().length, 1, '旧任务 continuation 不得污染清空后的新对话');
+  assert.strictEqual(cancelLoop.getMessages()[0].id, 'msg_welcome');
+  console.log('✓ 清空对话成功拦截并隔离已发起的异步任务');
+
+  console.log('\n--- [10] 验证 API 模式报错降级时原消息被正确终态化 (Codex API 降级修复验证) ---');
+  const fallbackLoop = new AgentLoop({
+    config: {
+      mode: 'api',
+      apiKey: 'test-invalid-key',
+      apiUrl: 'http://127.0.0.1:99999/invalid', // 故意触发失败
+    },
+  });
+  await fallbackLoop.sendMessage('查航班');
+  const allMsgs = fallbackLoop.getMessages();
+  // 第一条应为报错提示信息，必须 isStreaming = false, thinking = ''
+  const failedApiMsg = allMsgs.find((m) => m.content && m.content.includes('DeepSeek API'));
+  assert(failedApiMsg, '应记录 API 报错降级提示');
+  assert.strictEqual(failedApiMsg.isStreaming, false, '降级原消息必须置为 isStreaming=false');
+  assert.strictEqual(failedApiMsg.thinking, '', '降级原消息必须清空 thinking 避免永久转圈');
+  console.log('✓ API 降级时原消息终态化与 spinner 正常清理');
+
   console.log('\n🎉 独立 Agent 小程序成功通过 a2ui-miniprogram 模块完成全流程测试！\n');
 }
 

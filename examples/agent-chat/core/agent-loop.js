@@ -94,6 +94,8 @@ class AgentLoop {
 
     this.state = 'idle'; // 'idle' | 'thinking' | 'streaming' | 'tool_executing'
     this.messages = [];
+    this.generationId = 0;
+    this._activeRequest = null;
 
     this.initWelcomeMessage();
   }
@@ -120,9 +122,19 @@ class AgentLoop {
   }
 
   clearHistory() {
+    this.generationId++;
+    if (this._activeRequest) {
+      try {
+        if (typeof this._activeRequest.abort === 'function') {
+          this._activeRequest.abort();
+        }
+      } catch (_) {}
+      this._activeRequest = null;
+    }
     if (this.engine && typeof this.engine.clear === 'function') {
       this.engine.clear();
     }
+    this.setState('idle');
     this.initWelcomeMessage();
   }
 
@@ -133,6 +145,7 @@ class AgentLoop {
   async sendMessage(userText) {
     if (!userText || !userText.trim() || this.state !== 'idle') return;
 
+    const currentGen = ++this.generationId;
     const trimmed = userText.trim();
     const userMsgId = 'msg_user_' + Date.now();
     this.messages.push({
@@ -144,16 +157,17 @@ class AgentLoop {
     this.notifyUpdate();
 
     if (this.config.mode === 'api' && this.config.apiKey) {
-      await this.runDeepSeekLoop(trimmed);
+      await this.runDeepSeekLoop(trimmed, currentGen);
     } else {
-      await this.runMockLoop(trimmed);
+      await this.runMockLoop(trimmed, currentGen);
     }
   }
 
   /**
    * DeepSeek 真实 API 调用与 Function Calling 工具驱动
    */
-  async runDeepSeekLoop(userText) {
+  async runDeepSeekLoop(userText, currentGen) {
+    const gen = currentGen !== undefined ? currentGen : this.generationId;
     this.setState('thinking');
     const agentMsgId = 'msg_agent_' + Date.now();
     const agentMsg = {
@@ -195,7 +209,7 @@ class AgentLoop {
       if (typeof wx !== 'undefined' && wx.request) {
         // 微信小程序环境：通过 wx.request 发起调用
         responseData = await new Promise((resolve, reject) => {
-          wx.request({
+          const reqTask = wx.request({
             url: this.config.apiUrl,
             method: 'POST',
             header: {
@@ -212,6 +226,7 @@ class AgentLoop {
             },
             fail: reject,
           });
+          this._activeRequest = reqTask;
         });
       } else if (https) {
         // Node.js 自动化测试与 CI 环境
@@ -243,8 +258,12 @@ class AgentLoop {
           req.on('error', reject);
           req.write(JSON.stringify(payload));
           req.end();
+          this._activeRequest = req;
         });
       }
+
+      this._activeRequest = null;
+      if (gen !== this.generationId) return;
 
       const choice = responseData?.choices?.[0];
       const message = choice?.message;
@@ -255,11 +274,13 @@ class AgentLoop {
 
       this.setState('streaming');
       const text = message.content || '已为您查询并生成实时交互卡片：';
-      await this.streamTextToMessage(agentMsg, text);
+      await this.streamTextToMessage(agentMsg, text, gen);
+      if (gen !== this.generationId) return;
 
       // 处理 Tool Calls
       if (message.tool_calls && message.tool_calls.length > 0) {
         for (let i = 0; i < message.tool_calls.length; i++) {
+          if (gen !== this.generationId) return;
           const toolCall = message.tool_calls[i];
           const toolName = toolCall.function?.name;
           let args = {};
@@ -292,12 +313,19 @@ class AgentLoop {
         agentMsg.thinking = '✨ DeepSeek Tool Call 与 a2ui-miniprogram 渲染完成';
       }
     } catch (e) {
+      this._activeRequest = null;
+      if (gen !== this.generationId) return;
       console.warn('DeepSeek API 调用失败，自动降级至内置仿真驱动:', e.message);
+      // Finalize the API message before falling back to mock mode (Codex Comment 7)
+      agentMsg.isStreaming = false;
+      agentMsg.thinking = '';
       agentMsg.content = `(DeepSeek API: ${e.message}，已自动平滑降级至智能仿真模式)\n\n`;
-      await this.runMockLoop(userText);
+      this.notifyUpdate();
+      await this.runMockLoop(userText, gen);
       return;
     }
 
+    if (gen !== this.generationId) return;
     agentMsg.isStreaming = false;
     this.setState('idle');
     this.notifyUpdate();
@@ -445,11 +473,16 @@ class AgentLoop {
         msg.surfaceId = surfaceId;
         msg.renderTree = renderTree;
         msg.a2uiMessages = a2uiMessages;
+        if (!msg.cards) {
+          msg.cards = [];
+        }
+        msg.cards.push({ surfaceId, renderTree });
       }
     }
   }
 
-  async runMockLoop(userText) {
+  async runMockLoop(userText, currentGen) {
+    const gen = currentGen !== undefined ? currentGen : this.generationId;
     this.setState('thinking');
     const agentMsgId = 'msg_agent_' + Date.now();
     const agentMsg = {
@@ -464,22 +497,26 @@ class AgentLoop {
     this.notifyUpdate();
 
     await this.sleep(100);
+    if (gen !== this.generationId) return;
     this.setState('streaming');
 
     if (/耳机|商品|购买|特惠/i.test(userText)) {
-      await this.streamTextToMessage(agentMsg, '为您推荐索尼旗舰降噪耳机，已为您匹配专属新人优惠券：');
+      await this.streamTextToMessage(agentMsg, '为您推荐索尼旗舰降噪耳机，已为您匹配专属新人优惠券：', gen);
+      if (gen !== this.generationId) return;
       this.executeA2UITool(agentMsg, 'render_product_card', {
         title: 'Sony WH-1000XM5 无线降噪耳机',
         price: 2899,
         discountPrice: 2399,
       });
     } else if (/表单|登录|核验/i.test(userText)) {
-      await this.streamTextToMessage(agentMsg, '请在下方表单中完成身份核验与安全登录：');
+      await this.streamTextToMessage(agentMsg, '请在下方表单中完成身份核验与安全登录：', gen);
+      if (gen !== this.generationId) return;
       this.executeA2UITool(agentMsg, 'render_form_card', {
         title: '身份核验登录表单',
       });
     } else {
-      await this.streamTextToMessage(agentMsg, '为您查询到国航 CA1501 实时动态，支持在线选座：');
+      await this.streamTextToMessage(agentMsg, '为您查询到国航 CA1501 实时动态，支持在线选座：', gen);
+      if (gen !== this.generationId) return;
       this.executeA2UITool(agentMsg, 'render_flight_card', {
         flightNumber: 'CA1501',
         origin: '北京首都 (PEK)',
@@ -490,6 +527,7 @@ class AgentLoop {
       });
     }
 
+    if (gen !== this.generationId) return;
     agentMsg.isStreaming = false;
     this.setState('idle');
     this.notifyUpdate();
@@ -497,6 +535,7 @@ class AgentLoop {
 
   async handleA2UIAction(detail) {
     if (!detail) return;
+    const currentGen = ++this.generationId;
     const { surfaceId, componentId: _componentId, action, eventMessage } = detail;
     const eventName =
       detail.actionName ||
@@ -534,6 +573,7 @@ class AgentLoop {
 
     this.setState('thinking');
     await this.sleep(300);
+    if (currentGen !== this.generationId) return;
 
     const replyMsg = {
       id: 'msg_agent_' + Date.now(),
@@ -560,7 +600,8 @@ class AgentLoop {
       replyText = `操作已完成。`;
     }
 
-    await this.streamTextToMessage(replyMsg, replyText);
+    await this.streamTextToMessage(replyMsg, replyText, currentGen);
+    if (currentGen !== this.generationId) return;
     replyMsg.isStreaming = false;
     this.setState('idle');
     this.notifyUpdate();
@@ -576,13 +617,21 @@ class AgentLoop {
       if (msg.surfaceId === surfaceId) {
         msg.renderTree = this.engine.getRenderTree(surfaceId);
       }
+      if (msg.cards) {
+        for (const card of msg.cards) {
+          if (card.surfaceId === surfaceId) {
+            card.renderTree = this.engine.getRenderTree(surfaceId);
+          }
+        }
+      }
     }
     this.notifyUpdate();
   }
 
-  async streamTextToMessage(msg, fullText) {
+  async streamTextToMessage(msg, fullText, genId) {
     const chunkSize = 3;
     for (let i = 0; i < fullText.length; i += chunkSize) {
+      if (genId !== undefined && genId !== this.generationId) return;
       msg.content += fullText.slice(i, i + chunkSize);
       this.notifyUpdate();
       await this.sleep(20);

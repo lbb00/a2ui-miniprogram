@@ -72,8 +72,22 @@
               <text class="typing-cursor" wx:if="{{item.isStreaming}}">▍</text>
             </view>
 
-            <!-- A2UI 原生卡片：由卡片布局直接解释内容，移除冗余外围标签 -->
-            <view class="a2ui-card-wrapper" wx:if="{{item.surfaceId && item.renderTree}}">
+            <!-- A2UI 原生卡片：由卡片布局直接解释内容，支持单卡片与多卡片集合 -->
+            <block wx:if="{{item.cards && item.cards.length > 0}}">
+              <view class="a2ui-card-wrapper" wx:for="{{item.cards}}" wx:for-item="card" wx:key="surfaceId">
+                <a2ui-surface 
+                  id="{{card.surfaceId}}"
+                  class="chat-surface-card"
+                  data-surface-id="{{card.surfaceId}}"
+                  surfaceId="{{card.surfaceId}}"
+                  renderTree="{{card.renderTree}}"
+                  bind:rendered="onCardRendered"
+                  bind:action="onA2UIAction"
+                  bind:inputChange="onA2UIInput"
+                />
+              </view>
+            </block>
+            <view class="a2ui-card-wrapper" wx:elif="{{item.surfaceId && item.renderTree}}">
               <a2ui-surface 
                 id="{{item.surfaceId}}"
                 class="chat-surface-card"
