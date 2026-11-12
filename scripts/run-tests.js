@@ -26,6 +26,7 @@ const TEST_SUITES = [
   'protocol-rpc-and-functions.test.js',
   'rpc-capabilities.test.js',
   'deep-tree-and-rpc.test.js',
+  'v10-protocol-and-rpc.test.js',
 
   // 3. Security defenses and penetration tests
   'security-penetration.test.js',

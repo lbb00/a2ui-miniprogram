@@ -25,6 +25,7 @@ Component({
         if (newVal !== oldVal) {
           this.setData({ uiState: {} });
           if (this.internalEngine) {
+            this.internalEngine.destroy();
             this.internalEngine = null;
             this.processedMsgCount = 0;
             this.firstMsgSnapshot = null;
@@ -135,6 +136,9 @@ Component({
         this._engineUnsubs = [];
       }
       if (this.internalEngine) {
+        try {
+          this.internalEngine.destroy();
+        } catch (_) {}
         this.internalEngine = null;
       }
       this.engine = null;
@@ -346,6 +350,9 @@ Component({
         this.engine = null;
       }
       if (this.internalEngine) {
+        try {
+          this.internalEngine.destroy();
+        } catch (_) {}
         this.internalEngine = null;
       }
       this.processedMsgCount = 0;

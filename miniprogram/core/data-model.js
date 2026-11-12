@@ -4,6 +4,9 @@
  * Supports 15 built-in functions, TR35 date formatting, single-pass safe interpolation, prototype pollution protection
  */
 
+const A2UI_VERSION = '1.0';
+const A2UI_MIME_TYPE = 'application/a2ui+json';
+
 const { parsePointer, getIn, resolveSegs } = require('./pointer');
 
 /**
@@ -48,6 +51,32 @@ function getValueByPath(dataModel, path, scope = null) {
 }
 
 /**
+ * Checks if value is an A2UI path pointer binding object (1.0 @path or 0.9 single-key path)
+ */
+function isPathBinding(val) {
+  if (!val || typeof val !== 'object') return false;
+  if ('@path' in val) return true;
+  if ('path' in val && Object.keys(val).length === 1) return true;
+  return false;
+}
+
+/**
+ * Checks if value is an A2UI function call binding object (1.0 @call or 0.9 call)
+ */
+function isFunctionCall(val) {
+  if (!val || typeof val !== 'object') return false;
+  if (typeof val['@call'] === 'string') return true;
+  if (typeof val.call === 'string') {
+    const keys = Object.keys(val);
+    if ('args' in val) {
+      return keys.every((k) => k === 'call' || k === 'args' || k === 'returnType');
+    }
+    return keys.length === 1;
+  }
+  return false;
+}
+
+/**
  * Recursively resolves all @path and expressions in object or array (supports scope and circular reference protection)
  */
 function resolveDeep(target, dataModel, scope = null, depth = 0, seen = new WeakSet()) {
@@ -62,7 +91,7 @@ function resolveDeep(target, dataModel, scope = null, depth = 0, seen = new Weak
   }
   seen.add(target);
 
-  if ('@path' in target || '@call' in target) {
+  if (isPathBinding(target) || isFunctionCall(target)) {
     return resolveValue(target, dataModel, scope);
   }
 
@@ -289,15 +318,16 @@ function resolveValue(val, dataModel, scope = null) {
   if (val == null) return val;
 
   // 1. Path pointer object: {"@path": "title"}, {"path": "title"} or {"@path": ""}
-  if (typeof val === 'object' && ('@path' in val || 'path' in val)) {
+  if (isPathBinding(val)) {
     const rawPath = val['@path'] !== undefined ? val['@path'] : val.path;
     const resolved = getValueByPath(dataModel, rawPath, scope);
     return resolved !== undefined ? resolved : '';
   }
 
-  // 2. Function call object: {"@call": "formatCurrency", "args": {...}}
-  if (typeof val === 'object' && '@call' in val) {
-    return evaluateFunction(val['@call'], val.args, dataModel, scope);
+  // 2. Function call object: {"@call": "formatCurrency", "args": {...}} or legacy {"call": ...}
+  if (isFunctionCall(val)) {
+    const fnName = val['@call'] !== undefined ? val['@call'] : val.call;
+    return evaluateFunction(fnName, val.args, dataModel, scope);
   }
 
   // 3. String template interpolation: single pass scan to prevent double injection
@@ -784,6 +814,7 @@ function createRendererCapabilities(supportedCatalogs) {
   }
 
   return {
+    '1.0': v10Obj,
     'v1.0': v10Obj,
   };
 }
@@ -792,6 +823,9 @@ function createRendererCapabilities(supportedCatalogs) {
  * Evaluates official 15 built-in functions
  */
 function evaluateFunction(funcName, args = {}, dataModel = {}, scope = null) {
+  const normalizedName = typeof funcName === 'string' && funcName.startsWith('@')
+    ? funcName.slice(1)
+    : funcName;
   const resolvedArgs = {};
   if (args && typeof args === 'object') {
     for (const k of Object.keys(args)) {
@@ -799,7 +833,7 @@ function evaluateFunction(funcName, args = {}, dataModel = {}, scope = null) {
     }
   }
 
-  switch (funcName) {
+  switch (normalizedName) {
     case 'formatCurrency': {
       return formatCurrency(
         resolvedArgs.value,
@@ -977,6 +1011,10 @@ function evaluateFunction(funcName, args = {}, dataModel = {}, scope = null) {
 }
 
 module.exports = {
+  A2UI_VERSION,
+  A2UI_MIME_TYPE,
+  isPathBinding,
+  isFunctionCall,
   getValueByPath,
   resolveValue,
   resolveDeep,

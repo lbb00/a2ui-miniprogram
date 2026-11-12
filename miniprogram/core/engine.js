@@ -4,12 +4,35 @@
  * Prototype pollution protection, DAG depth guard, scoped path tracking, standard Action message reporting
  */
 
-const { resolveValue, resolveDeep, toBool, openUrl, createRendererCapabilities } = require('./data-model');
+const {
+  A2UI_VERSION,
+  A2UI_MIME_TYPE,
+  resolveValue,
+  resolveDeep,
+  toBool,
+  openUrl,
+  createRendererCapabilities
+} = require('./data-model');
 const { parsePointer, toPointer, getIn, setIn, resolveSegs, toPropertyPath, computeTreePatches } = require('./pointer');
 const { hasMarkdown, parseMarkdown } = require('./markdown');
 
 const MAX_DEPTH = 32;
 const MAX_TOTAL_NODES = 5000;
+
+/**
+ * Standard structured A2UI Error class with error code
+ */
+class A2UIError extends Error {
+  constructor(code, message, details = {}) {
+    super(typeof message === 'string' ? message : (details.message || code));
+    this.name = 'A2UIError';
+    this.code = code;
+    this.details = details;
+    if (typeof message === 'object' && message !== null) {
+      Object.assign(this.details, message);
+    }
+  }
+}
 
 /**
  * A2UI standard structured error codes (renderer_to_agent.json#/$defs/error)
@@ -20,7 +43,74 @@ const ErrorCodes = {
   EXECUTION_ERROR: 'EXECUTION_ERROR',
   UNALLOWED_PARENT: 'UNALLOWED_PARENT',
   UNALLOWED_CHILD: 'UNALLOWED_CHILD',
+  UNKNOWN_FUNCTION: 'UNKNOWN_FUNCTION',
+  NO_TRANSPORT: 'NO_TRANSPORT',
+  CANCELLED: 'CANCELLED',
+  SURFACE_DELETED: 'SURFACE_DELETED',
+  DISPOSED: 'DISPOSED',
+  TIMEOUT: 'TIMEOUT',
 };
+
+/**
+ * Fixed legacy key mapping table for copy-on-write normalization
+ */
+const LEGACY_KEY_MAPPINGS = [
+  ['checks', '@checks'],
+  ['catalogId', '@catalogId'],
+  ['accessibility', '@accessibility'],
+  ['metadata', '@metadata'],
+];
+
+/**
+ * Normalizes component properties adhering to A2UI 1.0 standard with Copy-on-Write (zero allocation for pure 1.0)
+ */
+function normalizeComponent(comp, reportedConflicts = null, _surfaceId = 'unknown') {
+  if (!comp || typeof comp !== 'object') return comp;
+
+  let needsCopy = false;
+  for (let i = 0; i < LEGACY_KEY_MAPPINGS.length; i++) {
+    const legacyKey = LEGACY_KEY_MAPPINGS[i][0];
+    if (comp[legacyKey] !== undefined) {
+      needsCopy = true;
+      break;
+    }
+  }
+
+  // Pure 1.0 (no legacy keys): zero allocation, return original reference directly
+  if (!needsCopy) {
+    return comp;
+  }
+
+  // Copy-on-write shallow copy with prototype pollution guard
+  const normalized = {};
+  for (const key of Object.keys(comp)) {
+    if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+      continue;
+    }
+    normalized[key] = comp[key];
+  }
+
+  for (let i = 0; i < LEGACY_KEY_MAPPINGS.length; i++) {
+    const [legacyKey, standardKey] = LEGACY_KEY_MAPPINGS[i];
+    if (comp[legacyKey] !== undefined) {
+      if (comp[standardKey] !== undefined) {
+        // Value conflict: standard @ takes precedence, log warning once per id:key
+        const warnKey = `${comp.id || 'anonymous'}:${legacyKey}`;
+        if (reportedConflicts && !reportedConflicts.has(warnKey)) {
+          reportedConflicts.add(warnKey);
+          console.warn(`[A2UI 1.0] Conflict: Component '${comp.id}' has both '${standardKey}' and '${legacyKey}'. Standard '${standardKey}' takes precedence.`);
+        }
+      } else {
+        // Only legacy key: migrate to standard @ key
+        normalized[standardKey] = comp[legacyKey];
+      }
+      // Physically remove legacy key so downstream only reads 1.0 @ key
+      delete normalized[legacyKey];
+    }
+  }
+
+  return normalized;
+}
 
 /**
  * Basic Catalog known component collection
@@ -49,17 +139,34 @@ const KNOWN_COMPONENTS = new Set([
 ]);
 
 class A2UIEngine {
-  constructor() {
+  constructor(options = {}) {
     this.surfaces = new Map();
     this.listeners = new Set();
     this.outboundListeners = new Set();
     this.errorListeners = new Set();
     this.rendererFunctions = new Map();
     this.customComponents = new Set();
+    this.catalogs = new Map();
     this._storage = new Map();
     this._clipboard = '';
     this._lastVibrate = null;
+    this.pendingAgentCalls = new Map();
+    this._callSeq = 0;
+    this._isDestroyed = false;
+    this.legacyOutbound = options.legacyOutbound !== undefined ? Boolean(options.legacyOutbound) : true;
     this.registerBuiltinRendererFunctions();
+  }
+
+  /**
+   * Register a component catalog definition with permissions
+   */
+  registerCatalog(catalogId, def = {}) {
+    this.catalogs.set(catalogId, {
+      catalogId,
+      components: new Set(def.components || []),
+      functions: new Set(def.functions || []),
+      allowedCallers: def.allowedCallers || ['agent', 'renderer'],
+    });
   }
 
   /**
@@ -205,20 +312,63 @@ class A2UIEngine {
   }
 
   dispatchOutbound(msg) {
+    let delivered = 0;
+    const errors = [];
     if (this.outboundListener) {
       try {
         this.outboundListener(msg);
+        delivered++;
       } catch (e) {
+        errors.push(e);
         console.error('[A2UI] outboundListener error:', e);
       }
     }
     for (const listener of this.outboundListeners) {
       try {
         listener(msg);
+        delivered++;
       } catch (e) {
+        errors.push(e);
         console.error('[A2UI] outbound listener error:', e);
       }
     }
+    return { delivered, errors };
+  }
+
+  /**
+   * Unified outbound message wrapper supporting A2UI 1.0 renderer_to_agent and legacyOutbound mode
+   */
+  wrapOutbound(kind, body) {
+    if (this.legacyOutbound) {
+      if (kind === 'action') {
+        const legacyEvent = Object.assign({}, body);
+        const actionWithEvent = Object.assign({}, body, { event: legacyEvent });
+        return {
+          version: 'v1.0',
+          action: actionWithEvent,
+          event: legacyEvent,
+          renderer_to_agent: {
+            action: body,
+          },
+        };
+      }
+      return {
+        version: 'v1.0',
+        [kind]: body,
+        renderer_to_agent: {
+          [kind]: body,
+        },
+      };
+    }
+
+    // Pure 1.0 standard output
+    return {
+      version: A2UI_VERSION,
+      [kind]: body,
+      renderer_to_agent: {
+        [kind]: body,
+      },
+    };
   }
 
   /**
@@ -231,10 +381,7 @@ class A2UIEngine {
       path: path !== undefined && path !== null ? String(path) : '/',
       message: message ? String(message) : '',
     };
-    return {
-      version: 'v1.0',
-      error: errorObj,
-    };
+    return this.wrapOutbound('error', errorObj);
   }
 
   emitError(surfaceId, code, path, message) {
@@ -263,23 +410,170 @@ class A2UIEngine {
    * Construct standard response message adhering to renderer_to_agent.json#/$defs/rendererFunctionResponse
    */
   createRendererFunctionResponse(functionCallId, result, error = null) {
+    let respPayload;
     if (error) {
-      return {
-        version: 'v1.0',
-        rendererFunctionResponse: {
-          functionCallId,
-          error: typeof error === 'string' ? { code: ErrorCodes.EXECUTION_ERROR, message: error } : error,
-        },
+      respPayload = {
+        functionCallId,
+        error: typeof error === 'string' ? { code: ErrorCodes.EXECUTION_ERROR, message: error } : error,
       };
-    }
-    return {
-      version: 'v1.0',
-      rendererFunctionResponse: {
+    } else {
+      respPayload = {
         functionCallId,
         response: result,
         value: result,
+      };
+    }
+    return this.wrapOutbound('rendererFunctionResponse', respPayload);
+  }
+
+  /**
+   * Client-initiated Remote Procedure Call to Agent (Client -> Agent RPC)
+   */
+  callAgentFunction(surfaceId, callFunction, options = {}) {
+    const opts = (options && typeof options === 'object') ? options : {};
+
+    if (this._isDestroyed) {
+      return Promise.reject(new A2UIError(ErrorCodes.DISPOSED, 'A2UIEngine has been destroyed'));
+    }
+
+    if (!callFunction || typeof callFunction !== 'object') {
+      return Promise.reject(new A2UIError(ErrorCodes.VALIDATION_FAILED, 'Invalid callFunction payload'));
+    }
+
+    const fnName = callFunction['@call'] || callFunction.call || callFunction.name;
+    if (!fnName || typeof fnName !== 'string') {
+      return Promise.reject(new A2UIError(ErrorCodes.VALIDATION_FAILED, 'Missing or invalid function name in callFunction'));
+    }
+
+    const hasTransport = Boolean(this.outboundListener) || this.outboundListeners.size > 0;
+    if (!hasTransport) {
+      return Promise.reject(new A2UIError(ErrorCodes.NO_TRANSPORT, 'No outbound transport listener registered to dispatch callAgentFunction'));
+    }
+
+    let timeout = 10000;
+    if (opts.timeout !== undefined) {
+      const parsedTimeout = Number(opts.timeout);
+      if (Number.isFinite(parsedTimeout) && parsedTimeout > 0) {
+        timeout = Math.min(parsedTimeout, 2147483647);
+      } else if (parsedTimeout === 0) {
+        timeout = 0;
+      }
+    }
+
+    this._callSeq += 1;
+    const functionCallId = `agcall_${Date.now()}_${this._callSeq}_${Math.random().toString(36).slice(2, 6)}`;
+    const surface = surfaceId ? this.surfaces.get(surfaceId) : null;
+    const dataModel = surface ? surface.dataModel : {};
+    const rawArgs = callFunction.args || {};
+    const args = resolveDeep(rawArgs, dataModel);
+    const catalogId = callFunction['@catalogId'] || callFunction.catalogId || (surface ? surface.catalogId : undefined);
+
+    const callPayload = {
+      surfaceId: surfaceId || (surface ? surface.surfaceId : 'unknown'),
+      functionCallId,
+      callFunction: {
+        '@call': fnName,
+        ...(catalogId ? { catalogId } : {}),
+        args,
       },
     };
+
+    return new Promise((resolve, reject) => {
+      let timer = null;
+      if (timeout > 0) {
+        timer = setTimeout(() => {
+          if (this.pendingAgentCalls.has(functionCallId)) {
+            this.pendingAgentCalls.delete(functionCallId);
+            reject(new A2UIError(ErrorCodes.TIMEOUT, `callAgentFunction timed out after ${timeout}ms: ${functionCallId}`, { functionCallId, surfaceId }));
+          }
+        }, timeout);
+      }
+
+      this.pendingAgentCalls.set(functionCallId, {
+        resolve,
+        reject,
+        timer,
+        surfaceId,
+        functionCallId,
+      });
+
+      const msg = this.wrapOutbound('callAgentFunction', callPayload);
+      try {
+        const { delivered, errors } = this.dispatchOutbound(msg);
+        if (delivered === 0 && errors.length > 0) {
+          if (timer) clearTimeout(timer);
+          this.pendingAgentCalls.delete(functionCallId);
+          reject(new A2UIError(ErrorCodes.EXECUTION_ERROR, `Failed to dispatch outbound message: ${errors[0]?.message || errors[0]}`, { errors }));
+        }
+      } catch (err) {
+        if (timer) clearTimeout(timer);
+        this.pendingAgentCalls.delete(functionCallId);
+        reject(err);
+      }
+    });
+  }
+
+  /**
+   * Handle Agent response to previously dispatched callAgentFunction
+   */
+  handleAgentFunctionResponse(respData) {
+    if (!respData || typeof respData !== 'object') {
+      return null;
+    }
+    const { functionCallId, value, response, error } = respData;
+    if (!functionCallId) {
+      console.warn('[A2UI] agentFunctionResponse received without functionCallId');
+      return null;
+    }
+
+    const pending = this.pendingAgentCalls.get(functionCallId);
+    if (!pending) {
+      console.warn(`[A2UI] agentFunctionResponse ignored for unknown or expired functionCallId: '${functionCallId}'`);
+      return null;
+    }
+
+    if (pending.timer) {
+      clearTimeout(pending.timer);
+    }
+    this.pendingAgentCalls.delete(functionCallId);
+
+    const result = value !== undefined ? value : response;
+    if (error) {
+      const errObj = new A2UIError(
+        error.code || ErrorCodes.EXECUTION_ERROR,
+        error.message || String(error),
+        { functionCallId, error }
+      );
+      pending.reject(errObj);
+    } else {
+      pending.resolve(result);
+    }
+
+    return {
+      agentFunctionResponse: {
+        functionCallId,
+        ...(error ? { error } : { response: result, value: result }),
+      },
+    };
+  }
+
+  /**
+   * Safe rejection of pending Agent RPC calls
+   */
+  _rejectPendingCalls(code, filterFn = null) {
+    const entries = Array.from(this.pendingAgentCalls.values());
+    for (const pending of entries) {
+      if (!filterFn || filterFn(pending)) {
+        if (pending.timer) {
+          clearTimeout(pending.timer);
+        }
+        this.pendingAgentCalls.delete(pending.functionCallId);
+        pending.reject(new A2UIError(code, `Agent RPC call ${code.toLowerCase()}: ${pending.functionCallId}`, {
+          functionCallId: pending.functionCallId,
+          surfaceId: pending.surfaceId,
+        }));
+      }
+    }
   }
 
   /**
@@ -380,21 +674,26 @@ class A2UIEngine {
    * Process single or multiple A2UI message streams
    */
   process(messages) {
-    const msgs = Array.isArray(messages) ? messages : [messages];
+    if (!messages) return null;
+    const initialList = Array.isArray(messages) ? messages : [messages];
+    const msgs = [];
+    for (const m of initialList) {
+      if (m && typeof m === 'object' && Array.isArray(m.agent_to_renderer)) {
+        msgs.push(...m.agent_to_renderer);
+      } else {
+        msgs.push(m);
+      }
+    }
+
     const affectedSurfaces = new Set();
     const responses = [];
 
     for (const msg of msgs) {
-      if (msg && msg.callRendererFunction) {
-        const resp = this.executeRendererFunction(msg.callRendererFunction);
-        if (resp) responses.push(resp);
-      } else {
-        const res = this.processMessage(msg);
-        if (typeof res === 'string') {
-          affectedSurfaces.add(res);
-        } else if (res && res.rendererFunctionResponse) {
-          responses.push(res);
-        }
+      const res = this.processMessage(msg);
+      if (typeof res === 'string' && this.surfaces.has(res)) {
+        affectedSurfaces.add(res);
+      } else if (res && (res.rendererFunctionResponse || res.agentFunctionResponse)) {
+        responses.push(res);
       }
     }
 
@@ -421,15 +720,25 @@ class A2UIEngine {
       return null;
     }
 
+    // Unpack top-level agent_to_renderer envelope if present
+    const raw = (msg.agent_to_renderer && typeof msg.agent_to_renderer === 'object')
+      ? msg.agent_to_renderer
+      : msg;
+
     try {
       // 0. callRendererFunction
-      if (msg.callRendererFunction) {
-        return this.executeRendererFunction(msg.callRendererFunction);
+      if (raw.callRendererFunction) {
+        return this.executeRendererFunction(raw.callRendererFunction);
+      }
+
+      // 0b. agentFunctionResponse
+      if (raw.agentFunctionResponse) {
+        return this.handleAgentFunctionResponse(raw.agentFunctionResponse);
       }
 
       // 1. createSurface
-      if (msg.createSurface) {
-        const { surfaceId, catalogId, components, dataModel, sendDataModel, theme } = msg.createSurface;
+      if (raw.createSurface) {
+        const { surfaceId, catalogId, components, dataModel, sendDataModel, theme } = raw.createSurface;
         if (!surfaceId) {
           this.emitError('unknown', ErrorCodes.VALIDATION_FAILED, '/createSurface/surfaceId', 'surfaceId is required');
           return null;
@@ -446,6 +755,7 @@ class A2UIEngine {
             rootId: 'root',
             sendDataModel: Boolean(sendDataModel),
             reportedUnknown: new Set(),
+            reportedConflicts: new Set(),
             theme: theme && typeof theme === 'object' ? theme : null,
           };
           this.surfaces.set(surfaceId, surface);
@@ -460,6 +770,9 @@ class A2UIEngine {
         if (!surface.reportedUnknown) {
           surface.reportedUnknown = new Set();
         }
+        if (!surface.reportedConflicts) {
+          surface.reportedConflicts = new Set();
+        }
 
         // Support components and dataModel bundled with createSurface (CR-H4)
         if (dataModel && typeof dataModel === 'object') {
@@ -472,20 +785,22 @@ class A2UIEngine {
           surface.dataModel = Object.assign({}, surface.dataModel, safeData);
         }
         if (Array.isArray(components)) {
-          components.forEach((comp, idx) => {
-            if (!comp || typeof comp !== 'object') {
+          components.forEach((rawComp, idx) => {
+            if (!rawComp || typeof rawComp !== 'object') {
               this.emitError(surfaceId, ErrorCodes.VALIDATION_FAILED, `/components/${idx}`, 'Component must be an object');
               return;
             }
-            if (!comp.id) {
+            if (!rawComp.id) {
               this.emitError(surfaceId, ErrorCodes.VALIDATION_FAILED, `/components/${idx}`, 'Component missing id');
               return;
             }
-            if (comp.component && !KNOWN_COMPONENTS.has(comp.component) && !this.customComponents.has(comp.component)) {
-              const errKey = `${comp.id}:${comp.component}`;
+            const comp = normalizeComponent(rawComp, surface.reportedConflicts, surfaceId);
+            const compName = comp.component;
+            if (compName && !KNOWN_COMPONENTS.has(compName) && !this.customComponents.has(compName)) {
+              const errKey = `${comp.id}:${compName}`;
               if (!surface.reportedUnknown.has(errKey)) {
                 surface.reportedUnknown.add(errKey);
-                this.emitError(surfaceId, ErrorCodes.UNKNOWN_COMPONENT, `/components/${comp.id}/component`, `Unknown component: ${comp.component}`);
+                this.emitError(surfaceId, ErrorCodes.UNKNOWN_COMPONENT, `/components/${comp.id}/component`, `Unknown component: ${compName}`);
               }
             }
             surface.components.set(comp.id, comp);
@@ -498,8 +813,8 @@ class A2UIEngine {
       }
 
       // 2. updateComponents
-      if (msg.updateComponents) {
-        const { surfaceId, components } = msg.updateComponents;
+      if (raw.updateComponents) {
+        const { surfaceId, components } = raw.updateComponents;
         const surface = this.surfaces.get(surfaceId);
         if (!surface) {
           this.emitError(surfaceId || 'unknown', ErrorCodes.VALIDATION_FAILED, '/', `Surface '${surfaceId}' not found`);
@@ -508,22 +823,27 @@ class A2UIEngine {
         if (!surface.reportedUnknown) {
           surface.reportedUnknown = new Set();
         }
+        if (!surface.reportedConflicts) {
+          surface.reportedConflicts = new Set();
+        }
 
         if (Array.isArray(components)) {
-          components.forEach((comp, idx) => {
-            if (!comp || typeof comp !== 'object') {
+          components.forEach((rawComp, idx) => {
+            if (!rawComp || typeof rawComp !== 'object') {
               this.emitError(surfaceId, ErrorCodes.VALIDATION_FAILED, `/components/${idx}`, 'Component must be an object');
               return;
             }
-            if (!comp.id) {
+            if (!rawComp.id) {
               this.emitError(surfaceId, ErrorCodes.VALIDATION_FAILED, `/components/${idx}`, 'Component missing id');
               return;
             }
-            if (comp.component && !KNOWN_COMPONENTS.has(comp.component) && !this.customComponents.has(comp.component)) {
-              const errKey = `${comp.id}:${comp.component}`;
+            const comp = normalizeComponent(rawComp, surface.reportedConflicts, surfaceId);
+            const compName = comp.component;
+            if (compName && !KNOWN_COMPONENTS.has(compName) && !this.customComponents.has(compName)) {
+              const errKey = `${comp.id}:${compName}`;
               if (!surface.reportedUnknown.has(errKey)) {
                 surface.reportedUnknown.add(errKey);
-                this.emitError(surfaceId, ErrorCodes.UNKNOWN_COMPONENT, `/components/${comp.id}/component`, `Unknown component: ${comp.component}`);
+                this.emitError(surfaceId, ErrorCodes.UNKNOWN_COMPONENT, `/components/${comp.id}/component`, `Unknown component: ${compName}`);
               }
             }
             surface.components.set(comp.id, comp);
@@ -536,8 +856,8 @@ class A2UIEngine {
       }
 
       // 3. updateDataModel
-      if (msg.updateDataModel) {
-        const { surfaceId, path, value, data } = msg.updateDataModel;
+      if (raw.updateDataModel) {
+        const { surfaceId, path, value, data } = raw.updateDataModel;
         const surface = this.surfaces.get(surfaceId);
         if (!surface) {
           this.emitError(surfaceId || 'unknown', ErrorCodes.VALIDATION_FAILED, '/', `Surface '${surfaceId}' not found`);
@@ -570,19 +890,21 @@ class A2UIEngine {
       }
 
       // 4. deleteSurface
-      if (msg.deleteSurface) {
-        const surfaceId = typeof msg.deleteSurface === 'string'
-          ? msg.deleteSurface
-          : (msg.deleteSurface.surfaceId || null);
+      if (raw.deleteSurface) {
+        const surfaceId = typeof raw.deleteSurface === 'string'
+          ? raw.deleteSurface
+          : (raw.deleteSurface.surfaceId || null);
         if (surfaceId) {
+          this._rejectPendingCalls(ErrorCodes.SURFACE_DELETED, (p) => p.surfaceId === surfaceId);
           this.surfaces.delete(surfaceId);
         }
         return surfaceId;
       }
 
+      this.emitError('unknown', ErrorCodes.VALIDATION_FAILED, '/', 'Unknown or unsupported message type');
       return null;
     } catch (err) {
-      const sId = (msg.createSurface?.surfaceId || msg.updateComponents?.surfaceId || msg.updateDataModel?.surfaceId || msg.deleteSurface?.surfaceId || msg.callRendererFunction?.surfaceId) || 'unknown';
+      const sId = (raw?.createSurface?.surfaceId || raw?.updateComponents?.surfaceId || raw?.updateDataModel?.surfaceId || raw?.deleteSurface?.surfaceId || raw?.callRendererFunction?.surfaceId) || 'unknown';
       this.emitError(sId, ErrorCodes.EXECUTION_ERROR, '/', err.message || String(err));
       return null;
     }
@@ -680,6 +1002,17 @@ class A2UIEngine {
         }
       }
 
+      // A2UI 1.0 component envelope properties
+      if (comp['@catalogId'] !== undefined || comp.catalogId !== undefined) {
+        node.catalogId = comp['@catalogId'] !== undefined ? comp['@catalogId'] : comp.catalogId;
+      }
+      if (comp['@accessibility'] !== undefined || comp.accessibility !== undefined) {
+        node.accessibility = comp['@accessibility'] !== undefined ? comp['@accessibility'] : comp.accessibility;
+      }
+      if (comp['@metadata'] !== undefined || comp.metadata !== undefined) {
+        node.metadata = comp['@metadata'] !== undefined ? comp['@metadata'] : comp.metadata;
+      }
+
       // Detect and flag custom extension components (micro-level generics mechanism)
       const isCustomComponent = this.customComponents.has(comp.component) || !KNOWN_COMPONENTS.has(comp.component);
       if (isCustomComponent && comp.component !== 'Surface' && comp.component !== 'View') {
@@ -689,7 +1022,9 @@ class A2UIEngine {
         // Reserved engine keywords to prevent polluting structure
         const ENGINE_RESERVED = new Set([
           'id', 'component', 'variant', 'align', 'justify', 'fit', 'weight',
-          'children', 'child', 'tabs', 'trigger', 'content', 'action', 'checks', 'disabled'
+          'children', 'child', 'tabs', 'trigger', 'content', 'action', 'checks', '@checks',
+          'catalogId', '@catalogId', 'accessibility', '@accessibility', 'metadata', '@metadata',
+          'disabled'
         ]);
 
         for (const [propKey, propVal] of Object.entries(comp)) {
@@ -935,8 +1270,9 @@ class A2UIEngine {
       if (comp.disabled !== undefined) {
         disabled = toBool(resolveValue(comp.disabled, dataModel, scope));
       }
-      if (comp.checks && Array.isArray(comp.checks)) {
-        const resolvedChecks = resolveDeep(comp.checks, dataModel, scope);
+      const rawChecks = comp['@checks'] !== undefined ? comp['@checks'] : comp.checks;
+      if (rawChecks && Array.isArray(rawChecks)) {
+        const resolvedChecks = resolveDeep(rawChecks, dataModel, scope);
         node.checks = resolvedChecks;
         const failedCheck = resolvedChecks.find((c) => !toBool(c.condition));
         if (failedCheck) {
@@ -971,10 +1307,10 @@ class A2UIEngine {
           node.children.push(childNode);
         }
       }
-      // Case C: Dynamic list template object {"path": "/restaurants", "componentId": "restaurant_card"}
-      else if (comp.children && typeof comp.children === 'object' && comp.children.componentId) {
-        const listPath = comp.children.path;
-        const templateCompId = comp.children.componentId;
+      // Case C: Dynamic list template object {"@path": "/restaurants", "componentId": "restaurant_card"}
+      else if (comp.children && typeof comp.children === 'object' && (comp.children.componentId || comp.children['@componentId'])) {
+        const listPath = comp.children['@path'] !== undefined ? comp.children['@path'] : comp.children.path;
+        const templateCompId = comp.children['@componentId'] !== undefined ? comp.children['@componentId'] : comp.children.componentId;
         const listSegs = resolveSegs(listPath, scope);
         const listData = getIn(dataModel, listSegs);
 
@@ -1129,14 +1465,11 @@ class A2UIEngine {
       action.dataModel = JSON.parse(JSON.stringify(surface.dataModel));
     }
 
-    const legacyEvent = Object.assign({}, action);
-    action.event = legacyEvent;
+    if (comp['@catalogId'] !== undefined || comp.catalogId !== undefined) {
+      action.catalogId = comp['@catalogId'] !== undefined ? comp['@catalogId'] : comp.catalogId;
+    }
 
-    return {
-      version: 'v1.0',
-      action,
-      event: legacyEvent,
-    };
+    return this.wrapOutbound('action', action);
   }
 
   /**
@@ -1159,14 +1492,7 @@ class A2UIEngine {
       action.dataModel = JSON.parse(JSON.stringify(surface.dataModel));
     }
 
-    const legacyEvent = Object.assign({}, action);
-    action.event = legacyEvent;
-
-    return {
-      version: 'v1.0',
-      action,
-      event: legacyEvent,
-    };
+    return this.wrapOutbound('action', action);
   }
 
   /**
@@ -1217,6 +1543,7 @@ class A2UIEngine {
    * Clear all engine surface states (OPT-1)
    */
   clear() {
+    this._rejectPendingCalls(ErrorCodes.CANCELLED);
     this.surfaces.clear();
   }
 
@@ -1224,18 +1551,24 @@ class A2UIEngine {
    * Destroy engine instance and release all listeners and internal states
    */
   destroy() {
+    this._isDestroyed = true;
+    this._rejectPendingCalls(ErrorCodes.DISPOSED);
     this.surfaces.clear();
     this.listeners.clear();
     this.outboundListeners.clear();
     this.errorListeners.clear();
     this.rendererFunctions.clear();
     this.customComponents.clear();
+    this.catalogs.clear();
     this._storage.clear();
   }
 }
 
 module.exports = {
   A2UIEngine,
+  A2UIError,
+  A2UI_VERSION,
+  A2UI_MIME_TYPE,
   ErrorCodes,
   KNOWN_COMPONENTS,
   createRendererCapabilities,
