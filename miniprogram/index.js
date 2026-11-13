@@ -1,5 +1,16 @@
-const { A2UIEngine, ErrorCodes, KNOWN_COMPONENTS, toPropertyPath, computeTreePatches } = require('./core/engine');
 const {
+  A2UIEngine,
+  A2UIError,
+  A2UI_VERSION,
+  A2UI_MIME_TYPE,
+  ErrorCodes,
+  KNOWN_COMPONENTS,
+  toPropertyPath,
+  computeTreePatches
+} = require('./core/engine');
+const {
+  isPathBinding,
+  isFunctionCall,
   resolveValue,
   resolveDeep,
   getValueByPath,
@@ -19,8 +30,13 @@ const { a2uiCustomBehavior } = require('./core/a2ui-custom-behavior');
 
 module.exports = {
   A2UIEngine,
+  A2UIError,
+  A2UI_VERSION,
+  A2UI_MIME_TYPE,
   ErrorCodes,
   KNOWN_COMPONENTS,
+  isPathBinding,
+  isFunctionCall,
   a2uiCustomBehavior,
   resolveValue,
   resolveDeep,

@@ -10,7 +10,7 @@
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-22%20%7C%2024-brightgreen.svg?style=flat-square" alt="node version"/></a>
   <a href="https://developers.weixin.qq.com/miniprogram/dev/framework/"><img src="https://img.shields.io/badge/%E5%BE%AE%E4%BF%A1%E5%B0%8F%E7%A8%8B%E5%BA%8F-%E2%89%A5%202.14.0-07c160.svg?style=flat-square" alt="wechat miniprogram"/></a>
   <a href="https://github.com/a2ui-project/a2ui"><img src="https://img.shields.io/badge/A2UI%20%E8%A7%84%E8%8C%83-v1.0-10b981.svg?style=flat-square" alt="spec"/></a>
-  <a href="scripts/run-tests.js"><img src="https://img.shields.io/badge/tests-25%2F25%20passed-success.svg?style=flat-square" alt="tests"/></a>
+  <a href="scripts/run-tests.js"><img src="https://img.shields.io/badge/tests-27%2F27%20passed-success.svg?style=flat-square" alt="tests"/></a>
   <a href="scripts/benchmark-wechat-perf.js"><img src="https://img.shields.io/badge/benchmarks-passing-blue.svg?style=flat-square" alt="benchmarks"/></a>
   <a href="miniprogram/index.d.ts"><img src="https://img.shields.io/badge/TypeScript-Ready-3178c6.svg?style=flat-square" alt="typescript"/></a>
 </p>
@@ -23,12 +23,15 @@
 
 ## 核心特性
 
-- **A2UI v1.0 规范对齐**：支持 `createSurface`、`updateComponents`、`updateDataModel`、`deleteSurface` 以及端侧 RPC（`callRendererFunction`）。
+- **A2UI 1.0 协议支持**：支持 A2UI 1.0 消息类型、双向顶层信封（`agent_to_renderer` & `renderer_to_agent`）与动态前缀规范（`@path`、`@call`、`@checks`、`@catalogId`、`@accessibility`、`@metadata`）。
+- **双向远程过程调用（RPC）**：完整原生支持 Agent 调用端侧函数（`callRendererFunction` / `rendererFunctionResponse`）与端侧主动调用 Agent（`callAgentFunction` / `agentFunctionResponse`），具备全自动 ID 派发与基于 Promise 的完整生命周期安全管理。
+- **Catalog 仅注册元数据，不执行授权**：`engine.registerCatalog(catalogId, def)` 仅保存描述性元数据；`components`、`functions` 和 `allowedCallers` 不是访问控制列表，也不形成权限边界。调用方必须在将不可信请求交给引擎之前自行授权。协议支持不代表已通过完整规范一致性验证。
+- **写时复制（CoW）轻量归一化**：对纯正 1.0 消息实现零对象分配直接引用穿透；对 0.9 遗留字段实现非阻断浅拷贝归一化与旧键物理清洗，兼顾极致性能与鲁棒兼容。
 - **局部差量更新**：`computeTreePatches` 提供精确到属性与数组下标级的补丁更新，减少 `setData` 序列化载荷（基准测试场景下较全量 AST 降低 70%~97%）。
 - **流式合帧调度**：基于 `wx.nextTick` 将高频打字机式的事件排放聚合成单帧更新，减轻通信桥堵塞。
 - **模版静态展开**：0~4 级静态模版全部编译为原生 WXML 标签，维持单根组件实例与扁平 DOM 深度（43 个官方规范用例中最大深度为 14 层）。
 - **受控输入体验保护**：敲键触发时自动避免重复回写当前活跃输入框的 value，缓解真机输入法光标跳跃问题，同时允许外部显式重置。
-- **资源清理**：组件 `detached` 生命周期内主动解绑引擎监听、定时器与状态引用，降低长会话内存残留。
+- **资源清理与悬挂保护**：组件 `detached` 生命周期内主动解绑引擎监听、销毁定时器并拒绝未完成 RPC 请求（`CANCELLED`、`SURFACE_DELETED`、`DISPOSED`），杜绝长会话内存与异步泄漏。
 - **安全防护**：内置 ReDoS 正则防护（含嵌套与固定次数解析）、原型链污染阻断（`__proto__`、`constructor`）与安全 Markdown 解析。
 - **扩展支持**：内置外围布局插槽（`header`、`footer`、`empty`），并通过抽象节点（`componentGenerics`）支持业务定制图表、地图与复杂组件。
 

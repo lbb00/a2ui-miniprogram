@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.0.0
+
+### Major Changes
+
+- **Official A2UI 1.0 Protocol Alignment**:
+  - Support for the A2UI 1.0 message types and wire envelopes described below; this is not a claim of full specification conformance.
+  - Transparent `agent_to_renderer` inbound wire envelope unwrapping (`createSurface`, `updateComponents`, `updateDataModel`, `deleteSurface`, `callRendererFunction`, `agentFunctionResponse`).
+  - Standard `renderer_to_agent` outbound wire envelope wrapping with unified `wrapOutbound` gateway (`action`, `callAgentFunction`, `rendererFunctionResponse`, `error`).
+- **Bidirectional Remote Procedure Call (RPC)**:
+  - Added native `callAgentFunction` enabling renderer-to-agent remote function execution with automatic ID generation, promise-based resolution, and configurable timeout guards.
+  - Added `agentFunctionResponse` processing mapping response payloads back to awaiting calls.
+  - Comprehensive lifecycle-aware rejection cleanup on `clear()` (`CANCELLED`), `deleteSurface()` (`SURFACE_DELETED`), and `destroy()` (`DISPOSED`).
+  - Transport validation with immediate `NO_TRANSPORT` error if no outbound listener is attached.
+- **Copy-on-Write (CoW) Schema Normalization**:
+  - Implemented high-performance zero-allocation normalization for pure 1.0 component definitions.
+  - Automated migration from legacy 0.9 keys (`checks`, `catalogId`, `accessibility`, `metadata`) to 1.0 `@` notation (`@checks`, `@catalogId`, `@accessibility`, `@metadata`), with physical key sanitization.
+  - Conflict arbitration giving precedence to 1.0 `@` fields without crashing the UI, accompanied by deduplicated warning notifications.
+- **Data Binding & Dynamic List Template Enhancements**:
+  - Standardized resolution of dynamic `@path` and `@call` expressions alongside legacy single-key bindings.
+  - Native support for `@path` and `@componentId` in dynamic list templates (`children: { "@path": "...", "@componentId": "..." }`).
+  - Standardized `@`-prefixed built-in function invocation (`@formatCurrency`, `@formatDate`, `@required`, etc.).
+- **Multi-Catalog & Permissive Migration Architecture**:
+  - Added `engine.registerCatalog(catalogId, def)` for catalog metadata registration only. It does not enforce authorization: `components`, `functions`, and `allowedCallers` are descriptive, not access-control lists. Applications must authorize untrusted requests before dispatching them to the engine.
+  - Configurable `legacyOutbound` mode (enabled by default in 1.x) ensuring smooth backward compatibility with legacy agents while allowing strict 1.0 closed outputs.
+  - Exported standard `A2UI_VERSION` (`1.0`) and `A2UI_MIME_TYPE` (`application/a2ui+json`).
+
 ## 0.2.0
 
 ### Minor Changes

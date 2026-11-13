@@ -1,7 +1,10 @@
 /**
  * a2ui-miniprogram TypeScript Definitions
- * High-performance native WeChat MiniProgram renderer for Google A2UI (Agent-to-User Interface) v1.0 specification.
+ * High-performance native WeChat MiniProgram renderer for Google A2UI (Agent-to-User Interface) 1.0 specification.
  */
+
+export const A2UI_VERSION: '1.0';
+export const A2UI_MIME_TYPE: 'application/a2ui+json';
 
 export type ErrorCode =
   | 'VALIDATION_FAILED'
@@ -12,9 +15,20 @@ export type ErrorCode =
   | 'UNKNOWN_FUNCTION'
   | 'INVALID_FUNCTION_CALL'
   | 'UNKNOWN_ERROR'
+  | 'NO_TRANSPORT'
+  | 'SURFACE_DELETED'
   | 'TIMEOUT'
   | 'CANCELLED'
   | 'DISPOSED';
+
+export const ErrorCodes: Record<ErrorCode, string>;
+export const KNOWN_COMPONENTS: Set<string>;
+
+export class A2UIError extends Error {
+  code: ErrorCode | string;
+  details: Record<string, any>;
+  constructor(code: ErrorCode | string, message?: string | Record<string, any>, details?: Record<string, any>);
+}
 
 export interface ActionEvent {
   name: string;
@@ -33,7 +47,8 @@ export interface ActionDefinition {
 export interface ComponentDefinition {
   id: string;
   component: string;
-  children?: string[] | { explicitList?: string[] };
+  children?: string[] | { explicitList?: string[]; path?: string; '@path'?: string; componentId?: string; '@componentId'?: string };
+  child?: string;
   action?: ActionDefinition;
   value?: any;
   text?: any;
@@ -51,15 +66,25 @@ export interface ComponentDefinition {
   steps?: number;
   weight?: number;
   style?: Record<string, any>;
+  checks?: any[];
+  '@checks'?: any[];
+  catalogId?: string;
+  '@catalogId'?: string;
+  accessibility?: Record<string, any>;
+  '@accessibility'?: Record<string, any>;
+  metadata?: Record<string, any>;
+  '@metadata'?: Record<string, any>;
   [key: string]: any;
 }
 
 export interface CreateSurfacePayload {
   surfaceId: string;
   catalogId?: string;
+  '@catalogId'?: string;
   components?: ComponentDefinition[];
   dataModel?: Record<string, any>;
   sendDataModel?: boolean;
+  theme?: Record<string, any>;
 }
 
 export interface UpdateComponentsPayload {
@@ -85,47 +110,79 @@ export interface CallRendererFunctionPayload {
     call?: string;
     name?: string;
     catalogId?: string;
+    '@catalogId'?: string;
     args?: Record<string, any>;
   };
 }
 
+export interface CallAgentFunctionPayload {
+  surfaceId: string;
+  functionCallId: string;
+  callFunction: {
+    '@call': string;
+    catalogId?: string;
+    '@catalogId'?: string;
+    args?: Record<string, any>;
+  };
+}
+
+export interface AgentFunctionResponsePayload {
+  surfaceId?: string;
+  functionCallId: string;
+  value?: any;
+  response?: any;
+  error?: {
+    code?: string;
+    message?: string;
+  };
+}
+
 export interface A2UIMessage {
-  version?: 'v1.0';
+  version?: '1.0' | 'v1.0';
   createSurface?: CreateSurfacePayload;
   updateComponents?: UpdateComponentsPayload;
   updateDataModel?: UpdateDataModelPayload;
   deleteSurface?: DeleteSurfacePayload | string;
   callRendererFunction?: CallRendererFunctionPayload;
+  agentFunctionResponse?: AgentFunctionResponsePayload;
+  agent_to_renderer?: A2UIMessage | A2UIMessage[];
   [key: string]: any;
 }
 
 export interface OutboundActionMessage {
-  version: 'v1.0';
+  version: '1.0' | 'v1.0';
   action: {
     name: string;
     surfaceId: string;
     sourceComponentId: string;
     timestamp: string;
     context: Record<string, any>;
+    catalogId?: string;
     userMessage?: string;
     dataModel?: Record<string, any>;
     event?: Record<string, any>;
   };
   event?: Record<string, any>;
+  renderer_to_agent?: {
+    action: Record<string, any>;
+  };
 }
 
 export interface OutboundErrorMessage {
-  version: 'v1.0';
+  version: '1.0' | 'v1.0';
   error: {
-    code: ErrorCode;
+    code: ErrorCode | string;
     surfaceId: string;
     path: string;
     message: string;
   };
+  renderer_to_agent?: {
+    error: Record<string, any>;
+  };
 }
 
 export interface OutboundFunctionResponseMessage {
-  version: 'v1.0';
+  version: '1.0' | 'v1.0';
   rendererFunctionResponse: {
     functionCallId: string;
     value?: any;
@@ -135,12 +192,36 @@ export interface OutboundFunctionResponseMessage {
       message: string;
     };
   };
+  renderer_to_agent?: {
+    rendererFunctionResponse: Record<string, any>;
+  };
+}
+
+export interface OutboundCallAgentFunctionMessage {
+  version: '1.0' | 'v1.0';
+  callAgentFunction: CallAgentFunctionPayload;
+  renderer_to_agent?: {
+    callAgentFunction: CallAgentFunctionPayload;
+  };
 }
 
 export type OutboundMessage =
   | OutboundActionMessage
   | OutboundErrorMessage
-  | OutboundFunctionResponseMessage;
+  | OutboundFunctionResponseMessage
+  | OutboundCallAgentFunctionMessage;
+
+/** process preserves synchronous results unless a renderer function is asynchronous. */
+export type A2UIProcessResult =
+  | string
+  | string[]
+  | OutboundFunctionResponseMessage
+  | OutboundFunctionResponseMessage[]
+  | null;
+
+export type A2UIProcessReturn = A2UIProcessResult | Promise<
+  OutboundFunctionResponseMessage | null | (OutboundFunctionResponseMessage | null)[]
+>;
 
 export interface RenderNode {
   id: string;
@@ -160,6 +241,11 @@ export interface RenderNode {
   selectedIndex?: number;
   displayLabel?: string;
   validationError?: string;
+  catalogId?: string;
+  accessibility?: Record<string, any>;
+  metadata?: Record<string, any>;
+  checks?: any[];
+  '@checks'?: any[];
   [key: string]: any;
 }
 
@@ -177,26 +263,39 @@ export interface RendererCapabilityCatalog {
 }
 
 export interface RendererCapabilitiesMessage {
-  'v1.0': {
+  '1.0'?: {
+    supportedCatalogIds: string[];
+    inlineCatalogs?: any[];
+  };
+  'v1.0'?: {
     supportedCatalogIds: string[];
     inlineCatalogs?: any[];
   };
 }
 
+export interface A2UIEngineOptions {
+  legacyOutbound?: boolean;
+}
+
 export class A2UIEngine {
-  constructor();
+  constructor(options?: A2UIEngineOptions);
+
+  surfaces: Map<string, any>;
+  legacyOutbound: boolean;
+  catalogs: Map<string, any>;
+  pendingAgentCalls: Map<string, any>;
 
   /**
    * Process a single A2UI message or an array of messages
    */
   process(
     messages: A2UIMessage | A2UIMessage[]
-  ): string | string[] | OutboundFunctionResponseMessage | OutboundFunctionResponseMessage[] | null;
+  ): A2UIProcessReturn;
 
   /**
    * Process a single A2UI protocol message
    */
-  processMessage(msg: A2UIMessage): string | OutboundFunctionResponseMessage | null;
+  processMessage(msg: A2UIMessage): A2UIProcessReturn | OutboundErrorMessage | { agentFunctionResponse: AgentFunctionResponsePayload };
 
   /**
    * Get the assembled render tree for the specified surfaceId
@@ -221,95 +320,142 @@ export class A2UIEngine {
   addErrorListener(listener: (errorMsg: OutboundErrorMessage) => void): () => void;
 
   /**
-   * Register a custom client renderer function
+   * Register a custom component type
    */
-  registerRendererFunction(
-    name: string,
-    fn: (args: Record<string, any>, context: Record<string, any>) => any
+  registerComponent(name: string): void;
+  registerCustomComponent(name: string, schema?: Record<string, any>): void;
+
+  /**
+   * Register catalog metadata only; this does not enforce authorization.
+   * components, functions and allowedCallers are descriptive, not access-control lists.
+   * Callers must authorize untrusted requests before dispatching them to the engine.
+   */
+  registerCatalog(
+    catalogId: string,
+    def?: {
+      components?: string[];
+      functions?: string[];
+      allowedCallers?: string[];
+    }
   ): void;
 
   /**
-   * Register a custom component catalog schema
+   * Register client function (agent calling renderer)
    */
-  registerComponent(name: string): void;
-  registerCustomComponent(name: string, schema?: any): void;
+  registerRendererFunction(
+    name: string,
+    handler: (args: Record<string, any>, surfaceId: string, engine: A2UIEngine) => any
+  ): void;
 
   /**
-   * Construct a standard A2UI Action message for a tapped component
+   * Call a client renderer function directly
+   */
+  callRendererFunction(payload: { callRendererFunction?: CallRendererFunctionPayload } | CallRendererFunctionPayload): any;
+
+  /**
+   * Invoke an Agent function call (renderer calling agent)
+   */
+  callAgentFunction(
+    surfaceId: string,
+    callFunction: {
+      '@call'?: string;
+      call?: string;
+      name?: string;
+      '@catalogId'?: string;
+      catalogId?: string;
+      args?: Record<string, any>;
+    },
+    options?: { timeout?: number }
+  ): Promise<any>;
+
+  /**
+   * Handle Agent response to previously dispatched callAgentFunction
+   */
+  handleAgentFunctionResponse(respData: AgentFunctionResponsePayload): { agentFunctionResponse: any } | null;
+
+  /**
+   * Outbound transport listener management
+   */
+  setOutboundListener(listener: ((msg: any) => void) | null): void;
+  subscribeOutbound(listener: (msg: any) => void): () => void;
+  dispatchOutbound(msg: any): { delivered: number; errors: any[] };
+
+  /**
+   * Create an outbound Action message
    */
   createActionMessage(surfaceId: string, instanceId: string): OutboundActionMessage | null;
 
   /**
-   * Construct a standard A2UI error message
+   * Create a custom outbound Action message
    */
-  createErrorMessage(
+  createCustomActionMessage(
     surfaceId: string,
-    code: ErrorCode,
-    path: string,
-    message: string
-  ): OutboundErrorMessage;
+    componentId: string,
+    actionData?: Record<string, any>
+  ): OutboundActionMessage;
 
   /**
-   * Dispatch an outbound message to all registered listeners
+   * Create an outbound error message
    */
-  dispatchOutbound(msg: OutboundMessage): void;
+  createErrorMessage(surfaceId: string, code: ErrorCode | string, path: string, message: string): OutboundErrorMessage;
 
   /**
-   * Update client dataModel value at path and notify listeners
+   * Emit an error message through the error and outbound listeners
    */
-  handleInputChange(
-    surfaceId: string,
-    path: string,
-    value: any,
-    options?: { silent?: boolean }
-  ): string | null;
+  emitError(surfaceId: string, code: ErrorCode | string, path: string, message: string): OutboundErrorMessage;
 
   /**
-   * Compute directional patch set between old and new render trees (avoids cursor jumps)
+   * Handle user input changes
+   */
+  handleInputChange(surfaceId: string, path: string, value: any, options?: { silent?: boolean }): string | null;
+
+  /**
+   * Compute differential patches between two render trees
    */
   computeTreePatches(
-    oldTree: RenderNode,
-    newTree: RenderNode,
+    oldTree: RenderNode | null,
+    newTree: RenderNode | null,
     rootPrefix?: string,
     options?: ComputePatchesOptions
   ): TreePatches;
 
   /**
-   * Clear all surfaces and instances
+   * Clear all surfaces
    */
   clear(): void;
 
   /**
-   * Completely destroy the engine instance and release all listeners
+   * Destroy the engine instance and release all listeners
    */
   destroy(): void;
 }
 
-export const ErrorCodes: Record<string, ErrorCode>;
-export const KNOWN_COMPONENTS: Set<string>;
-export const CURRENCY_SYMBOLS: Record<string, string>;
-
-export function getValueByPath(root: any, path: string, scope?: any): any;
+export function isPathBinding(val: any, strict?: boolean): boolean;
+export function isFunctionCall(val: any): boolean;
+export function getValueByPath(dataModel: any, path: string, scope?: any): any;
 export function resolveValue(val: any, dataModel: any, scope?: any): any;
-export function resolveDeep(val: any, dataModel: any, scope?: any): any;
+export function resolveDeep(target: any, dataModel: any, scope?: any, depth?: number, seen?: WeakSet<any>): any;
 export function evaluateFunction(funcName: string, args?: Record<string, any>, dataModel?: any, scope?: any): any;
 export function isSafeRegex(pattern: string): boolean;
-export function executePluralize(value: number | string, forms?: Record<string, string>, locale?: string): string;
-export function openUrl(url: string): { success: boolean; url?: string; action?: string; error?: string };
+export function executePluralize(value: number, forms: Record<string, any>, locale?: string): string;
+export function openUrl(url: string): { success: boolean; error?: string };
 export function createRendererCapabilities(supportedCatalogs?: any): RendererCapabilitiesMessage;
-export function getCurrencySymbol(currency?: string): string;
-export function formatCurrency(value: number | string, currency?: string, decimals?: number, grouping?: boolean): string;
+export function toBool(val: any): boolean;
 export function formatTR35Date(date: Date, pattern: string): string;
-export function toBool(v: any): boolean;
+export const CURRENCY_SYMBOLS: Record<string, string>;
+export function getCurrencySymbol(currency: string): string;
+export function formatCurrency(value: any, currency?: string, decimals?: number, grouping?: boolean): string;
+
 export function hasMarkdown(text: string): boolean;
 export function parseMarkdown(text: string): string;
-export function parseInline(rawText: string): string;
+export function parseInline(text: string): string;
 export function escapeHtml(str: string): string;
 export function sanitizeUrl(url: string): string;
-export function toPropertyPath(pathOrSegs: string | string[], rootPrefix?: string): string;
+
+export function toPropertyPath(pathOrSegs: string | (string | number)[], rootPrefix?: string): string;
 export function computeTreePatches(
-  oldTree: RenderNode,
-  newTree: RenderNode,
+  oldTree: RenderNode | null,
+  newTree: RenderNode | null,
   rootPrefix?: string,
   options?: ComputePatchesOptions
 ): TreePatches;

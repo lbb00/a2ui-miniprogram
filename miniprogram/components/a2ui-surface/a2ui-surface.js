@@ -25,6 +25,7 @@ Component({
         if (newVal !== oldVal) {
           this.setData({ uiState: {} });
           if (this.internalEngine) {
+            this.internalEngine.destroy();
             this.internalEngine = null;
             this.processedMsgCount = 0;
             this.firstMsgSnapshot = null;
@@ -135,6 +136,9 @@ Component({
         this._engineUnsubs = [];
       }
       if (this.internalEngine) {
+        try {
+          this.internalEngine.destroy();
+        } catch (_) {}
         this.internalEngine = null;
       }
       this.engine = null;
@@ -346,6 +350,9 @@ Component({
         this.engine = null;
       }
       if (this.internalEngine) {
+        try {
+          this.internalEngine.destroy();
+        } catch (_) {}
         this.internalEngine = null;
       }
       this.processedMsgCount = 0;
@@ -562,17 +569,16 @@ Component({
       if (detail.action) {
         const engine = this.engine || this.internalEngine;
         const surfaceId = this.data.surfaceId;
-        const outboundMsg = {
-          version: 'v1.0',
-          action: Object.assign(
-            {
-              surfaceId,
-              sourceComponentId: componentId || 'custom_component',
-              timestamp: new Date().toISOString(),
-            },
-            detail.action
-          ),
-        };
+        const outboundMsg = engine && typeof engine.createCustomActionMessage === 'function'
+          ? engine.createCustomActionMessage(surfaceId, componentId, detail.action)
+          : {
+              version: '1.0',
+              action: Object.assign({}, detail.action, {
+                surfaceId,
+                sourceComponentId: componentId || 'custom_component',
+                timestamp: new Date().toISOString(),
+              }),
+            };
         if (engine && typeof engine.dispatchOutbound === 'function') {
           engine.dispatchOutbound(outboundMsg);
         }
@@ -580,7 +586,7 @@ Component({
         this.triggerEvent('action', {
           surfaceId,
           componentId,
-          action: outboundMsg.action,
+          action: outboundMsg.action || (outboundMsg.renderer_to_agent && outboundMsg.renderer_to_agent.action),
           eventMessage: outboundMsg,
         });
       } else if (componentId) {
