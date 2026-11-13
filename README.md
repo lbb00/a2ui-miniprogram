@@ -10,7 +10,7 @@ Native [WeChat Mini Program](https://developers.weixin.qq.com/miniprogram/dev/fr
   <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-22%20%7C%2024-brightgreen.svg?style=flat-square" alt="node version"/></a>
   <a href="https://developers.weixin.qq.com/miniprogram/dev/framework/"><img src="https://img.shields.io/badge/WeChat%20Mini%20Program-%E2%89%A5%202.14.0-07c160.svg?style=flat-square" alt="wechat miniprogram"/></a>
   <a href="https://github.com/a2ui-project/a2ui"><img src="https://img.shields.io/badge/A2UI%20Spec-v1.0-10b981.svg?style=flat-square" alt="spec"/></a>
-  <a href="scripts/run-tests.js"><img src="https://img.shields.io/badge/tests-26%2F26%20passed-success.svg?style=flat-square" alt="tests"/></a>
+  <a href="scripts/run-tests.js"><img src="https://img.shields.io/badge/tests-27%2F27%20passed-success.svg?style=flat-square" alt="tests"/></a>
   <a href="scripts/benchmark-wechat-perf.js"><img src="https://img.shields.io/badge/benchmarks-passing-blue.svg?style=flat-square" alt="benchmarks"/></a>
   <a href="miniprogram/index.d.ts"><img src="https://img.shields.io/badge/TypeScript-Ready-3178c6.svg?style=flat-square" alt="typescript"/></a>
 </p>
@@ -23,8 +23,9 @@ Native [WeChat Mini Program](https://developers.weixin.qq.com/miniprogram/dev/fr
 
 ## Features
 
-- **Official A2UI 1.0 Protocol Alignment**: Full compliance with A2UI 1.0 official specification, standard wire envelopes (`agent_to_renderer` & `renderer_to_agent`), and dynamic `@` prefixing convention (`@path`, `@call`, `@checks`, `@catalogId`, `@accessibility`, `@metadata`).
+- **A2UI 1.0 Protocol Support**: Supports A2UI 1.0 message types, wire envelopes (`agent_to_renderer` & `renderer_to_agent`), and dynamic `@` prefixing convention (`@path`, `@call`, `@checks`, `@catalogId`, `@accessibility`, `@metadata`).
 - **Bidirectional Remote Procedure Call (RPC)**: Native support for both Agent-to-Client (`callRendererFunction` / `rendererFunctionResponse`) and Client-to-Agent (`callAgentFunction` / `agentFunctionResponse`) with promise-based lifecycle resolution.
+- **Catalog Metadata, Not Authorization**: `engine.registerCatalog(catalogId, def)` stores descriptive catalog metadata only and does not enforce authorization. Its `components`, `functions`, and `allowedCallers` fields are not access-control lists. Applications must authorize untrusted requests before dispatching them to the engine. Protocol support is not a claim of full specification conformance.
 - **Copy-on-Write Schema Normalization**: Zero-allocation direct reference passthrough for pure 1.0 payloads, alongside robust non-blocking normalization for legacy 0.9 keys.
 - **Differential `setData` Updates**: `computeTreePatches` calculates granular property- and index-level updates, reducing bridge payload size on state changes (typical reductions between 70% and 97% on benchmark cases).
 - **Frame Batching with `wx.nextTick`**: Coalesces high-frequency streaming chunks (such as LLM token streams) within microtask ticks to mitigate bridge congestion.

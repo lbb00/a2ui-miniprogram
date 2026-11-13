@@ -127,6 +127,7 @@ export interface CallAgentFunctionPayload {
 }
 
 export interface AgentFunctionResponsePayload {
+  surfaceId?: string;
   functionCallId: string;
   value?: any;
   response?: any;
@@ -210,6 +211,18 @@ export type OutboundMessage =
   | OutboundFunctionResponseMessage
   | OutboundCallAgentFunctionMessage;
 
+/** process preserves synchronous results unless a renderer function is asynchronous. */
+export type A2UIProcessResult =
+  | string
+  | string[]
+  | OutboundFunctionResponseMessage
+  | OutboundFunctionResponseMessage[]
+  | null;
+
+export type A2UIProcessReturn = A2UIProcessResult | Promise<
+  OutboundFunctionResponseMessage | null | (OutboundFunctionResponseMessage | null)[]
+>;
+
 export interface RenderNode {
   id: string;
   component: string;
@@ -277,12 +290,12 @@ export class A2UIEngine {
    */
   process(
     messages: A2UIMessage | A2UIMessage[]
-  ): string | string[] | OutboundFunctionResponseMessage | OutboundFunctionResponseMessage[] | null;
+  ): A2UIProcessReturn;
 
   /**
    * Process a single A2UI protocol message
    */
-  processMessage(msg: A2UIMessage): string | OutboundFunctionResponseMessage | null;
+  processMessage(msg: A2UIMessage): A2UIProcessReturn | OutboundErrorMessage | { agentFunctionResponse: AgentFunctionResponsePayload };
 
   /**
    * Get the assembled render tree for the specified surfaceId
@@ -313,7 +326,9 @@ export class A2UIEngine {
   registerCustomComponent(name: string, schema?: Record<string, any>): void;
 
   /**
-   * Register a component catalog definition with permissions
+   * Register catalog metadata only; this does not enforce authorization.
+   * components, functions and allowedCallers are descriptive, not access-control lists.
+   * Callers must authorize untrusted requests before dispatching them to the engine.
    */
   registerCatalog(
     catalogId: string,
@@ -415,7 +430,7 @@ export class A2UIEngine {
   destroy(): void;
 }
 
-export function isPathBinding(val: any): boolean;
+export function isPathBinding(val: any, strict?: boolean): boolean;
 export function isFunctionCall(val: any): boolean;
 export function getValueByPath(dataModel: any, path: string, scope?: any): any;
 export function resolveValue(val: any, dataModel: any, scope?: any): any;

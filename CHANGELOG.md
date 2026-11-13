@@ -5,7 +5,7 @@
 ### Major Changes
 
 - **Official A2UI 1.0 Protocol Alignment**:
-  - Full compliance with the official A2UI 1.0 specification and wire protocols.
+  - Support for the A2UI 1.0 message types and wire envelopes described below; this is not a claim of full specification conformance.
   - Transparent `agent_to_renderer` inbound wire envelope unwrapping (`createSurface`, `updateComponents`, `updateDataModel`, `deleteSurface`, `callRendererFunction`, `agentFunctionResponse`).
   - Standard `renderer_to_agent` outbound wire envelope wrapping with unified `wrapOutbound` gateway (`action`, `callAgentFunction`, `rendererFunctionResponse`, `error`).
 - **Bidirectional Remote Procedure Call (RPC)**:
@@ -22,7 +22,7 @@
   - Native support for `@path` and `@componentId` in dynamic list templates (`children: { "@path": "...", "@componentId": "..." }`).
   - Standardized `@`-prefixed built-in function invocation (`@formatCurrency`, `@formatDate`, `@required`, etc.).
 - **Multi-Catalog & Permissive Migration Architecture**:
-  - Added `engine.registerCatalog(catalogId, def)` for multi-catalog registration and runtime verification.
+  - Added `engine.registerCatalog(catalogId, def)` for catalog metadata registration only. It does not enforce authorization: `components`, `functions`, and `allowedCallers` are descriptive, not access-control lists. Applications must authorize untrusted requests before dispatching them to the engine.
   - Configurable `legacyOutbound` mode (enabled by default in 1.x) ensuring smooth backward compatibility with legacy agents while allowing strict 1.0 closed outputs.
   - Exported standard `A2UI_VERSION` (`1.0`) and `A2UI_MIME_TYPE` (`application/a2ui+json`).
 

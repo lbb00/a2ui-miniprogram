@@ -164,12 +164,15 @@ class A2UIEngine {
     this.executedFunctionCalls = new Set();
     this._callSeq = 0;
     this._isDestroyed = false;
+    this._rendererCallEpoch = 0;
     this.legacyOutbound = options.legacyOutbound !== undefined ? Boolean(options.legacyOutbound) : true;
     this.registerBuiltinRendererFunctions();
   }
 
   /**
-   * Register a component catalog definition with permissions
+   * Register catalog metadata only; this does not enforce authorization.
+   * components, functions and allowedCallers are descriptive, not access-control lists.
+   * Callers must authorize untrusted requests before dispatching them to the engine.
    */
   registerCatalog(catalogId, def = {}) {
     this.catalogs.set(catalogId, {
@@ -680,6 +683,9 @@ class A2UIEngine {
     const rawArgs = callFunction.args || {};
     const args = resolveDeep(rawArgs, dataModel);
 
+    const epoch = this._rendererCallEpoch;
+    const isCurrent = () => !this._isDestroyed && this._rendererCallEpoch === epoch &&
+      (!surfaceId || this.surfaces.get(surfaceId) === surface);
     const handler = this.rendererFunctions.get(fnName);
     if (!handler) {
       const errResp = this.createRendererFunctionErrorResponse(functionCallId, {
@@ -695,13 +701,15 @@ class A2UIEngine {
 
       // Support asynchronous (Promise-returning) renderer functions
       if (result != null && typeof result.then === 'function') {
-        return result
+        return Promise.resolve(result)
           .then((asyncRes) => {
+            if (!isCurrent()) return null;
             const respMsg = this.createRendererFunctionResponse(functionCallId, asyncRes);
             this.dispatchOutbound(respMsg);
             return respMsg;
           })
           .catch((err) => {
+            if (!isCurrent()) return null;
             const errResp = this.createRendererFunctionErrorResponse(functionCallId, err);
             this.dispatchOutbound(errResp);
             return errResp;
@@ -756,9 +764,22 @@ class A2UIEngine {
     if (this._isDestroyed || !messages) return null;
     const initialList = Array.isArray(messages) ? messages : [messages];
     const msgs = [];
-    for (const m of initialList) {
+    // Walk array envelopes iteratively: spread can overflow the argument stack,
+    // and recursive process() calls let hostile nested envelopes exhaust it too.
+    const frames = [{ list: initialList, index: 0 }];
+    while (frames.length > 0) {
+      const frame = frames[frames.length - 1];
+      if (frame.index >= frame.list.length) {
+        frames.pop();
+        continue;
+      }
+      const m = frame.list[frame.index++];
       if (m && typeof m === 'object' && Array.isArray(m.agent_to_renderer)) {
-        msgs.push(...m.agent_to_renderer);
+        if (frames.length > MAX_DEPTH) {
+          this.emitError('unknown', ErrorCodes.VALIDATION_FAILED, '/agent_to_renderer', 'Envelope nesting exceeds maximum depth');
+          continue;
+        }
+        frames.push({ list: m.agent_to_renderer, index: 0 });
       } else {
         msgs.push(m);
       }
@@ -805,7 +826,7 @@ class A2UIEngine {
     }
 
     if (Array.isArray(msg.agent_to_renderer)) {
-      return this.process(msg.agent_to_renderer);
+      return this.process(msg);
     }
 
     // Unpack top-level agent_to_renderer envelope if present
@@ -826,7 +847,9 @@ class A2UIEngine {
 
       // 1. createSurface
       if (raw.createSurface) {
-        const { surfaceId, catalogId, components, dataModel, sendDataModel, theme } = raw.createSurface;
+        const { surfaceId, components, dataModel, sendDataModel, theme } = raw.createSurface;
+        const catalogId = raw.createSurface['@catalogId'] !== undefined
+          ? raw.createSurface['@catalogId'] : raw.createSurface.catalogId;
         if (!surfaceId) {
           this.emitError('unknown', ErrorCodes.VALIDATION_FAILED, '/createSurface/surfaceId', 'surfaceId is required');
           return null;
@@ -848,6 +871,7 @@ class A2UIEngine {
           };
           this.surfaces.set(surfaceId, surface);
         } else {
+          if (catalogId !== undefined) surface.catalogId = catalogId;
           if (sendDataModel !== undefined) {
             surface.sendDataModel = Boolean(sendDataModel);
           }
@@ -1636,6 +1660,8 @@ class A2UIEngine {
    * Clear all engine surface states (OPT-1)
    */
   clear() {
+    this._rendererCallEpoch++;
+    this.executedFunctionCalls.clear();
     this._rejectPendingCalls(ErrorCodes.CANCELLED);
     this.surfaces.clear();
   }
