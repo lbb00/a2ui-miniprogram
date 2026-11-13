@@ -18,6 +18,7 @@ permissions:
 jobs:
   release:
     name: Release & Publish
+    environment: a2ui-release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repo
