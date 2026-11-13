@@ -144,7 +144,7 @@ export interface A2UIMessage {
   deleteSurface?: DeleteSurfacePayload | string;
   callRendererFunction?: CallRendererFunctionPayload;
   agentFunctionResponse?: AgentFunctionResponsePayload;
-  agent_to_renderer?: A2UIMessage;
+  agent_to_renderer?: A2UIMessage | A2UIMessage[];
   [key: string]: any;
 }
 
@@ -346,6 +346,7 @@ export class A2UIEngine {
       '@call'?: string;
       call?: string;
       name?: string;
+      '@catalogId'?: string;
       catalogId?: string;
       args?: Record<string, any>;
     },
@@ -358,18 +359,25 @@ export class A2UIEngine {
   handleAgentFunctionResponse(respData: AgentFunctionResponsePayload): { agentFunctionResponse: any } | null;
 
   /**
-   * Outbound message listeners
+   * Outbound transport listener management
    */
-  onOutboundMessage(listener: (msg: any) => void): () => void;
   setOutboundListener(listener: ((msg: any) => void) | null): void;
   subscribeOutbound(listener: (msg: any) => void): () => void;
-  addOutboundListener(listener: (msg: any) => void): () => void;
   dispatchOutbound(msg: any): { delivered: number; errors: any[] };
 
   /**
    * Create an outbound Action message
    */
   createActionMessage(surfaceId: string, instanceId: string): OutboundActionMessage | null;
+
+  /**
+   * Create a custom outbound Action message
+   */
+  createCustomActionMessage(
+    surfaceId: string,
+    componentId: string,
+    actionData?: Record<string, any>
+  ): OutboundActionMessage;
 
   /**
    * Create an outbound error message

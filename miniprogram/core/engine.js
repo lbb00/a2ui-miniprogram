@@ -44,6 +44,8 @@ const ErrorCodes = {
   UNALLOWED_PARENT: 'UNALLOWED_PARENT',
   UNALLOWED_CHILD: 'UNALLOWED_CHILD',
   UNKNOWN_FUNCTION: 'UNKNOWN_FUNCTION',
+  INVALID_FUNCTION_CALL: 'INVALID_FUNCTION_CALL',
+  UNKNOWN_ERROR: 'UNKNOWN_ERROR',
   NO_TRANSPORT: 'NO_TRANSPORT',
   CANCELLED: 'CANCELLED',
   SURFACE_DELETED: 'SURFACE_DELETED',
@@ -76,7 +78,15 @@ function normalizeComponent(comp, reportedConflicts = null, _surfaceId = 'unknow
     }
   }
 
-  // Pure 1.0 (no legacy keys): zero allocation, return original reference directly
+  if (!needsCopy) {
+    if (Object.prototype.hasOwnProperty.call(comp, '__proto__') ||
+        Object.prototype.hasOwnProperty.call(comp, 'constructor') ||
+        Object.prototype.hasOwnProperty.call(comp, 'prototype')) {
+      needsCopy = true;
+    }
+  }
+
+  // Pure 1.0 (clean object with no legacy keys): zero allocation, return original reference directly
   if (!needsCopy) {
     return comp;
   }
@@ -151,6 +161,7 @@ class A2UIEngine {
     this._clipboard = '';
     this._lastVibrate = null;
     this.pendingAgentCalls = new Map();
+    this.executedFunctionCalls = new Set();
     this._callSeq = 0;
     this._isDestroyed = false;
     this.legacyOutbound = options.legacyOutbound !== undefined ? Boolean(options.legacyOutbound) : true;
@@ -314,12 +325,17 @@ class A2UIEngine {
   dispatchOutbound(msg) {
     let delivered = 0;
     const errors = [];
+    let primaryDelivered = false;
+    let primaryError = null;
+
     if (this.outboundListener) {
       try {
         this.outboundListener(msg);
         delivered++;
+        primaryDelivered = true;
       } catch (e) {
         errors.push(e);
+        primaryError = e;
         console.error('[A2UI] outboundListener error:', e);
       }
     }
@@ -332,7 +348,7 @@ class A2UIEngine {
         console.error('[A2UI] outbound listener error:', e);
       }
     }
-    return { delivered, errors };
+    return { delivered, errors, primaryDelivered, primaryError };
   }
 
   /**
@@ -341,12 +357,11 @@ class A2UIEngine {
   wrapOutbound(kind, body) {
     if (this.legacyOutbound) {
       if (kind === 'action') {
-        const legacyEvent = Object.assign({}, body);
-        const actionWithEvent = Object.assign({}, body, { event: legacyEvent });
+        const actionWithEvent = Object.assign({}, body, { event: body });
         return {
           version: 'v1.0',
           action: actionWithEvent,
-          event: legacyEvent,
+          event: body,
           renderer_to_agent: {
             action: body,
           },
@@ -412,9 +427,24 @@ class A2UIEngine {
   createRendererFunctionResponse(functionCallId, result, error = null) {
     let respPayload;
     if (error) {
+      let errObj;
+      if (typeof error === 'string') {
+        errObj = { code: ErrorCodes.EXECUTION_ERROR, message: error };
+      } else if (error && typeof error === 'object') {
+        errObj = {
+          code: error.code || ErrorCodes.EXECUTION_ERROR,
+          message: error.message || String(error),
+          ...(error.details ? { details: error.details } : {})
+        };
+      } else {
+        errObj = {
+          code: ErrorCodes.EXECUTION_ERROR,
+          message: String(error != null ? error : 'Execution error'),
+        };
+      }
       respPayload = {
         functionCallId,
-        error: typeof error === 'string' ? { code: ErrorCodes.EXECUTION_ERROR, message: error } : error,
+        error: errObj,
       };
     } else {
       respPayload = {
@@ -426,6 +456,20 @@ class A2UIEngine {
     return this.wrapOutbound('rendererFunctionResponse', respPayload);
   }
 
+  createRendererFunctionErrorResponse(functionCallId, error) {
+    return this.createRendererFunctionResponse(functionCallId, null, error);
+  }
+
+  createCustomActionMessage(surfaceId, componentId, actionData = {}) {
+    const rawAction = (actionData && typeof actionData === 'object') ? actionData : {};
+    const action = Object.assign({}, rawAction, {
+      surfaceId: surfaceId || rawAction.surfaceId || '',
+      sourceComponentId: componentId || rawAction.sourceComponentId || 'custom_component',
+      timestamp: rawAction.timestamp || new Date().toISOString(),
+    });
+    return this.wrapOutbound('action', action);
+  }
+
   /**
    * Client-initiated Remote Procedure Call to Agent (Client -> Agent RPC)
    */
@@ -434,6 +478,10 @@ class A2UIEngine {
 
     if (this._isDestroyed) {
       return Promise.reject(new A2UIError(ErrorCodes.DISPOSED, 'A2UIEngine has been destroyed'));
+    }
+
+    if (this.pendingAgentCalls.size >= 1000) {
+      return Promise.reject(new A2UIError(ErrorCodes.EXECUTION_ERROR, 'Exceeded maximum pending RPC calls limit (1000)'));
     }
 
     if (!callFunction || typeof callFunction !== 'object') {
@@ -453,10 +501,10 @@ class A2UIEngine {
     let timeout = 10000;
     if (opts.timeout !== undefined) {
       const parsedTimeout = Number(opts.timeout);
-      if (Number.isFinite(parsedTimeout) && parsedTimeout > 0) {
+      if (Number.isFinite(parsedTimeout) && parsedTimeout >= 0) {
         timeout = Math.min(parsedTimeout, 2147483647);
-      } else if (parsedTimeout === 0) {
-        timeout = 0;
+      } else {
+        return Promise.reject(new A2UIError(ErrorCodes.VALIDATION_FAILED, `Invalid timeout option: expected non-negative number, got ${opts.timeout}`));
       }
     }
 
@@ -499,11 +547,12 @@ class A2UIEngine {
 
       const msg = this.wrapOutbound('callAgentFunction', callPayload);
       try {
-        const { delivered, errors } = this.dispatchOutbound(msg);
-        if (delivered === 0 && errors.length > 0) {
+        const { delivered, errors, primaryError } = this.dispatchOutbound(msg);
+        if (primaryError || (delivered === 0 && errors.length > 0)) {
           if (timer) clearTimeout(timer);
           this.pendingAgentCalls.delete(functionCallId);
-          reject(new A2UIError(ErrorCodes.EXECUTION_ERROR, `Failed to dispatch outbound message: ${errors[0]?.message || errors[0]}`, { errors }));
+          const cause = primaryError || errors[0];
+          reject(new A2UIError(ErrorCodes.EXECUTION_ERROR, `Failed to dispatch outbound message: ${cause?.message || cause}`, { errors }));
         }
       } catch (err) {
         if (timer) clearTimeout(timer);
@@ -520,7 +569,7 @@ class A2UIEngine {
     if (!respData || typeof respData !== 'object') {
       return null;
     }
-    const { functionCallId, value, response, error } = respData;
+    const { functionCallId, surfaceId, value, response, error } = respData;
     if (!functionCallId) {
       console.warn('[A2UI] agentFunctionResponse received without functionCallId');
       return null;
@@ -529,6 +578,11 @@ class A2UIEngine {
     const pending = this.pendingAgentCalls.get(functionCallId);
     if (!pending) {
       console.warn(`[A2UI] agentFunctionResponse ignored for unknown or expired functionCallId: '${functionCallId}'`);
+      return null;
+    }
+
+    if (surfaceId && pending.surfaceId && surfaceId !== pending.surfaceId) {
+      console.warn(`[A2UI] agentFunctionResponse surfaceId mismatch: expected '${pending.surfaceId}', got '${surfaceId}'`);
       return null;
     }
 
@@ -580,6 +634,8 @@ class A2UIEngine {
    * Execute client function call (Agent -> Client RPC)
    */
   executeRendererFunction(callData) {
+    if (this._isDestroyed) return null;
+
     if (!callData || typeof callData !== 'object') {
       return this.emitError('unknown', ErrorCodes.VALIDATION_FAILED, '/', 'Invalid callRendererFunction payload');
     }
@@ -590,8 +646,18 @@ class A2UIEngine {
       return this.emitError(surfaceId || 'unknown', ErrorCodes.VALIDATION_FAILED, '/functionCallId', 'Missing required functionCallId');
     }
 
+    // Idempotency guard: prevent duplicate side effects if same functionCallId is replayed
+    if (this.executedFunctionCalls.has(functionCallId)) {
+      return null;
+    }
+    this.executedFunctionCalls.add(functionCallId);
+    if (this.executedFunctionCalls.size > 1000) {
+      const first = this.executedFunctionCalls.values().next().value;
+      this.executedFunctionCalls.delete(first);
+    }
+
     if (!callFunction || typeof callFunction !== 'object') {
-      const errResp = this.createRendererFunctionResponse(functionCallId, null, {
+      const errResp = this.createRendererFunctionErrorResponse(functionCallId, {
         code: ErrorCodes.EXECUTION_ERROR,
         message: 'Missing callFunction in callRendererFunction',
       });
@@ -601,7 +667,7 @@ class A2UIEngine {
 
     const fnName = callFunction['@call'] || callFunction.call || callFunction.name;
     if (!fnName) {
-      const errResp = this.createRendererFunctionResponse(functionCallId, null, {
+      const errResp = this.createRendererFunctionErrorResponse(functionCallId, {
         code: ErrorCodes.EXECUTION_ERROR,
         message: 'Missing function name in callFunction',
       });
@@ -616,8 +682,8 @@ class A2UIEngine {
 
     const handler = this.rendererFunctions.get(fnName);
     if (!handler) {
-      const errResp = this.createRendererFunctionResponse(functionCallId, null, {
-        code: 'UNKNOWN_FUNCTION',
+      const errResp = this.createRendererFunctionErrorResponse(functionCallId, {
+        code: ErrorCodes.UNKNOWN_FUNCTION,
         message: `Renderer function '${fnName}' not found`,
       });
       this.dispatchOutbound(errResp);
@@ -626,14 +692,27 @@ class A2UIEngine {
 
     try {
       const result = handler(args, surfaceId, this);
+
+      // Support asynchronous (Promise-returning) renderer functions
+      if (result != null && typeof result.then === 'function') {
+        return result
+          .then((asyncRes) => {
+            const respMsg = this.createRendererFunctionResponse(functionCallId, asyncRes);
+            this.dispatchOutbound(respMsg);
+            return respMsg;
+          })
+          .catch((err) => {
+            const errResp = this.createRendererFunctionErrorResponse(functionCallId, err);
+            this.dispatchOutbound(errResp);
+            return errResp;
+          });
+      }
+
       const respMsg = this.createRendererFunctionResponse(functionCallId, result);
       this.dispatchOutbound(respMsg);
       return respMsg;
     } catch (err) {
-      const errResp = this.createRendererFunctionResponse(functionCallId, null, {
-        code: err.code || ErrorCodes.EXECUTION_ERROR,
-        message: err.message || String(err),
-      });
+      const errResp = this.createRendererFunctionErrorResponse(functionCallId, err);
       this.dispatchOutbound(errResp);
       return errResp;
     }
@@ -674,7 +753,7 @@ class A2UIEngine {
    * Process single or multiple A2UI message streams
    */
   process(messages) {
-    if (!messages) return null;
+    if (this._isDestroyed || !messages) return null;
     const initialList = Array.isArray(messages) ? messages : [messages];
     const msgs = [];
     for (const m of initialList) {
@@ -690,9 +769,9 @@ class A2UIEngine {
 
     for (const msg of msgs) {
       const res = this.processMessage(msg);
-      if (typeof res === 'string' && this.surfaces.has(res)) {
+      if (typeof res === 'string') {
         affectedSurfaces.add(res);
-      } else if (res && (res.rendererFunctionResponse || res.agentFunctionResponse)) {
+      } else if (res && (res.rendererFunctionResponse || typeof res.then === 'function')) {
         responses.push(res);
       }
     }
@@ -703,6 +782,10 @@ class A2UIEngine {
     }
 
     if (responses.length > 0) {
+      const hasAsync = responses.some((r) => r && typeof r.then === 'function');
+      if (hasAsync) {
+        return responses.length === 1 ? responses[0] : Promise.all(responses);
+      }
       return responses.length === 1 ? responses[0] : responses;
     }
 
@@ -715,9 +798,14 @@ class A2UIEngine {
   }
 
   processMessage(msg) {
+    if (this._isDestroyed) return null;
     if (!msg || typeof msg !== 'object') {
       this.emitError('unknown', ErrorCodes.VALIDATION_FAILED, '/', 'Invalid message: expected object');
       return null;
+    }
+
+    if (Array.isArray(msg.agent_to_renderer)) {
+      return this.process(msg.agent_to_renderer);
     }
 
     // Unpack top-level agent_to_renderer envelope if present
@@ -1002,32 +1090,37 @@ class A2UIEngine {
         }
       }
 
-      // A2UI 1.0 component envelope properties
+      // A2UI 1.0 component envelope properties with deep binding resolution
       if (comp['@catalogId'] !== undefined || comp.catalogId !== undefined) {
-        node.catalogId = comp['@catalogId'] !== undefined ? comp['@catalogId'] : comp.catalogId;
+        const catVal = comp['@catalogId'] !== undefined ? comp['@catalogId'] : comp.catalogId;
+        node.catalogId = resolveValue(catVal, dataModel, scope);
       }
       if (comp['@accessibility'] !== undefined || comp.accessibility !== undefined) {
-        node.accessibility = comp['@accessibility'] !== undefined ? comp['@accessibility'] : comp.accessibility;
+        const a11yVal = comp['@accessibility'] !== undefined ? comp['@accessibility'] : comp.accessibility;
+        node.accessibility = resolveDeep(a11yVal, dataModel, scope);
       }
       if (comp['@metadata'] !== undefined || comp.metadata !== undefined) {
-        node.metadata = comp['@metadata'] !== undefined ? comp['@metadata'] : comp.metadata;
+        const metaVal = comp['@metadata'] !== undefined ? comp['@metadata'] : comp.metadata;
+        node.metadata = resolveDeep(metaVal, dataModel, scope);
       }
 
       // Detect and flag custom extension components (micro-level generics mechanism)
       const isCustomComponent = this.customComponents.has(comp.component) || !KNOWN_COMPONENTS.has(comp.component);
       if (isCustomComponent && comp.component !== 'Surface' && comp.component !== 'View') {
         node.isCustom = true;
-        node.props = {};
+        node.props = Object.create(null);
 
         // Reserved engine keywords to prevent polluting structure
         const ENGINE_RESERVED = new Set([
           'id', 'component', 'variant', 'align', 'justify', 'fit', 'weight',
           'children', 'child', 'tabs', 'trigger', 'content', 'action', 'checks', '@checks',
-          'catalogId', '@catalogId', 'accessibility', '@accessibility', 'metadata', '@metadata',
           'disabled'
         ]);
 
         for (const [propKey, propVal] of Object.entries(comp)) {
+          if (propKey === '__proto__' || propKey === 'constructor' || propKey === 'prototype') {
+            continue;
+          }
           if (!ENGINE_RESERVED.has(propKey)) {
             const resolvedVal = resolveDeep(propVal, dataModel, scope);
             node.props[propKey] = resolvedVal;
@@ -1553,6 +1646,8 @@ class A2UIEngine {
   destroy() {
     this._isDestroyed = true;
     this._rejectPendingCalls(ErrorCodes.DISPOSED);
+    this.outboundListener = null;
+    this.executedFunctionCalls.clear();
     this.surfaces.clear();
     this.listeners.clear();
     this.outboundListeners.clear();

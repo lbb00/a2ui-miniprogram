@@ -52,11 +52,13 @@ function getValueByPath(dataModel, path, scope = null) {
 
 /**
  * Checks if value is an A2UI path pointer binding object (1.0 @path or 0.9 single-key path)
+ * @param {any} val - Value to check
+ * @param {boolean} [strict=false] - If true, only matches explicit 1.0 @path (safe for resolveDeep)
  */
-function isPathBinding(val) {
+function isPathBinding(val, strict = false) {
   if (!val || typeof val !== 'object') return false;
   if ('@path' in val) return true;
-  if ('path' in val && Object.keys(val).length === 1) return true;
+  if (!strict && 'path' in val && Object.keys(val).length === 1) return true;
   return false;
 }
 
@@ -68,10 +70,7 @@ function isFunctionCall(val) {
   if (typeof val['@call'] === 'string') return true;
   if (typeof val.call === 'string') {
     const keys = Object.keys(val);
-    if ('args' in val) {
-      return keys.every((k) => k === 'call' || k === 'args' || k === 'returnType');
-    }
-    return keys.length === 1;
+    return keys.every((k) => k === 'call' || k === 'args' || k === 'returnType');
   }
   return false;
 }
@@ -91,7 +90,8 @@ function resolveDeep(target, dataModel, scope = null, depth = 0, seen = new Weak
   }
   seen.add(target);
 
-  if (isPathBinding(target) || isFunctionCall(target)) {
+  // In deep resolution, only resolve explicit 1.0 @path or function calls to avoid corrupting business data with 'path' keys
+  if (isPathBinding(target, true) || isFunctionCall(target)) {
     return resolveValue(target, dataModel, scope);
   }
 

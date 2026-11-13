@@ -489,10 +489,8 @@ async function runTests() {
       },
     });
 
-    // Verification: procResult should be the response object, NOT callId string
-    assert.ok(procResult);
-    assert.ok(procResult.agentFunctionResponse);
-    assert.strictEqual(procResult.agentFunctionResponse.functionCallId, callId);
+    // Verification: procResult should be null (process() ignores inbound agentFunctionResponse from return values to prevent echoing back to Agent)
+    assert.strictEqual(procResult, null, 'process() must not echo agentFunctionResponse back to Agent');
 
     // Verification: notify should NEVER have been called with callId
     assert.strictEqual(notifiedSurface, null, 'notify() must not be called with functionCallId');
@@ -514,14 +512,13 @@ async function runTests() {
     p1.catch(() => {});
     assert.ok(p1 instanceof Promise);
 
-    // invalid timeout fallbacks safely
+    // invalid negative timeout rejects with VALIDATION_FAILED
     const p2 = engine.callAgentFunction('s1', { '@call': 'fn2' }, { timeout: -50 });
-    p2.catch(() => {});
-    assert.ok(p2 instanceof Promise);
+    await assert.rejects(p2, (err) => err.code === ErrorCodes.VALIDATION_FAILED);
 
+    // invalid non-numeric timeout rejects with VALIDATION_FAILED
     const p3 = engine.callAgentFunction('s1', { '@call': 'fn3' }, { timeout: 'invalid' });
-    p3.catch(() => {});
-    assert.ok(p3 instanceof Promise);
+    await assert.rejects(p3, (err) => err.code === ErrorCodes.VALIDATION_FAILED);
 
     // Outbound listener throws error -> immediate rejection
     const failEngine = new A2UIEngine();
@@ -651,7 +648,7 @@ async function runTests() {
   console.log('✓ Passed [16/17]\n');
 
   // Test 17: WXML AST Cleanliness (No @checks on AST nodes)
-  console.log('[17/17] Testing WXML AST cleanliness (no @checks property on AST nodes)...');
+  console.log('[17/25] Testing WXML AST cleanliness (no @checks property on AST nodes)...');
   {
     const engine = new A2UIEngine();
     engine.process([
@@ -677,7 +674,260 @@ async function runTests() {
     assert.strictEqual(tree.validationError, 'Value required');
     assert.strictEqual(tree.disabled, true);
   }
-  console.log('✓ Passed [17/17]\n');
+  console.log('✓ Passed [17/25]\n');
+
+  // Test 18: Asynchronous (Promise) renderer functions in callRendererFunction
+  console.log('[18/25] Testing asynchronous (Promise) renderer functions in callRendererFunction...');
+  {
+    const engine = new A2UIEngine();
+    let outboundResp = null;
+    engine.onOutboundMessage((msg) => {
+      outboundResp = msg;
+    });
+
+    // Register async renderer function that returns a Promise
+    engine.registerRendererFunction('asyncFetchUser', async (args) => {
+      await new Promise((r) => setTimeout(r, 10));
+      return { userId: args.id, name: 'Alice', score: 100 };
+    });
+
+    const promise = engine.process({
+      callRendererFunction: {
+        functionCallId: 'async_call_1',
+        callFunction: {
+          '@call': 'asyncFetchUser',
+          args: { id: 42 },
+        },
+      },
+    });
+
+    // Wait for the async handler to complete
+    await promise;
+
+    assert.ok(outboundResp);
+    const respBody = outboundResp.renderer_to_agent.rendererFunctionResponse;
+    assert.strictEqual(respBody.functionCallId, 'async_call_1');
+    assert.deepStrictEqual(respBody.response, { userId: 42, name: 'Alice', score: 100 });
+    assert.deepStrictEqual(respBody.value, { userId: 42, name: 'Alice', score: 100 });
+
+    // Test async handler rejection
+    engine.registerRendererFunction('asyncFail', async () => {
+      throw new A2UIError(ErrorCodes.EXECUTION_ERROR, 'Async operation failed', { step: 'network' });
+    });
+
+    let failOutbound = null;
+    engine.onOutboundMessage((msg) => {
+      failOutbound = msg;
+    });
+
+    await engine.process({
+      callRendererFunction: {
+        functionCallId: 'async_call_2',
+        callFunction: {
+          '@call': 'asyncFail',
+        },
+      },
+    });
+
+    assert.ok(failOutbound);
+    const errBody = failOutbound.renderer_to_agent.rendererFunctionResponse;
+    assert.strictEqual(errBody.functionCallId, 'async_call_2');
+    assert.ok(errBody.error);
+    assert.strictEqual(errBody.error.code, ErrorCodes.EXECUTION_ERROR);
+    assert.strictEqual(errBody.error.message, 'Async operation failed');
+    assert.strictEqual(errBody.error.details.step, 'network');
+  }
+  console.log('✓ Passed [18/25]\n');
+
+  // Test 19: deleteSurface subscriber notification and UI clearance
+  console.log('[19/25] Testing deleteSurface subscriber notification and UI clearance...');
+  {
+    const engine = new A2UIEngine();
+    engine.process([
+      {
+        createSurface: {
+          surfaceId: 'surf_del_test',
+          components: [{ id: 'root', component: 'Text', text: 'To be deleted' }],
+        },
+      },
+    ]);
+
+    let notifiedSurface = null;
+    let notifiedTree = 'initial';
+    engine.subscribe((sId, tree) => {
+      notifiedSurface = sId;
+      notifiedTree = tree;
+    });
+
+    // Delete surface via process()
+    const delResult = engine.process({
+      deleteSurface: 'surf_del_test',
+    });
+
+    assert.strictEqual(delResult, 'surf_del_test', 'deleteSurface should return deleted surfaceId');
+    assert.strictEqual(notifiedSurface, 'surf_del_test', 'Subscriber should be notified of deleted surface');
+    assert.strictEqual(notifiedTree, null, 'Render tree for deleted surface must be null');
+    assert.strictEqual(engine.getRenderTree('surf_del_test'), null);
+  }
+  console.log('✓ Passed [19/25]\n');
+
+  // Test 20: Preservation of business single-key {path} in resolveDeep
+  console.log('[20/25] Testing preservation of business single-key {path} in resolveDeep...');
+  {
+    const { resolveDeep } = require('../miniprogram/core/data-model');
+    const bizRoute = {
+      action: 'navigate',
+      route: {
+        path: '/pages/detail/index',
+      },
+      icon: {
+        path: 'M 10 10 L 20 20 Z',
+      },
+    };
+
+    // Deep resolution should NOT erase { path: ... } when it is business data
+    const resolved = resolveDeep(bizRoute, { pages: 'something' });
+    assert.strictEqual(resolved.route.path, '/pages/detail/index', 'Business path property must not be cleared');
+    assert.strictEqual(resolved.icon.path, 'M 10 10 L 20 20 Z', 'Business SVG path must not be cleared');
+
+    // But explicit @path should still resolve
+    const mixed = {
+      route: { path: '/pages/detail/index' },
+      user: { '@path': '/user/name' },
+    };
+    const resolvedMixed = resolveDeep(mixed, { user: { name: 'Bob' } });
+    assert.strictEqual(resolvedMixed.route.path, '/pages/detail/index');
+    assert.strictEqual(resolvedMixed.user, 'Bob');
+  }
+  console.log('✓ Passed [20/25]\n');
+
+  // Test 21: Custom component accessibility, metadata and prototype pollution guard
+  console.log('[21/25] Testing custom component accessibility, metadata and prototype pollution guard...');
+  {
+    const engine = new A2UIEngine();
+    engine.registerCustomComponent('CustomCard');
+
+    engine.process([
+      {
+        createSurface: {
+          surfaceId: 'surf_custom',
+          components: [
+            {
+              id: 'root',
+              component: 'CustomCard',
+              '@accessibility': { label: { '@path': '/cardLabel' } },
+              '@metadata': { analyticsKey: 'card_view' },
+              customProp: { '@path': '/cardProp' },
+            },
+          ],
+          dataModel: {
+            cardLabel: 'Accessible Card',
+            cardProp: 'Extra Prop',
+          },
+        },
+      },
+    ]);
+
+    const tree = engine.getRenderTree('surf_custom');
+    assert.ok(tree);
+    assert.strictEqual(tree.isCustom, true);
+    assert.deepStrictEqual(tree.accessibility, { label: 'Accessible Card' });
+    assert.deepStrictEqual(tree.metadata, { analyticsKey: 'card_view' });
+    assert.strictEqual(tree.props.customProp, 'Extra Prop');
+    assert.strictEqual(Object.getPrototypeOf(tree.props), null, 'Custom component props should have null prototype');
+  }
+  console.log('✓ Passed [21/25]\n');
+
+  // Test 22: RPC idempotency guard on duplicate functionCallId
+  console.log('[22/25] Testing RPC idempotency guard on duplicate functionCallId...');
+  {
+    const engine = new A2UIEngine();
+    let executionCount = 0;
+    engine.registerRendererFunction('countExec', () => {
+      executionCount++;
+      return { count: executionCount };
+    });
+
+    const callPayload = {
+      functionCallId: 'idempotent_call_101',
+      callFunction: { '@call': 'countExec' },
+    };
+
+    engine.executeRendererFunction(callPayload);
+    assert.strictEqual(executionCount, 1);
+
+    // Replay with identical functionCallId
+    const secondRes = engine.executeRendererFunction(callPayload);
+    assert.strictEqual(secondRes, null, 'Replayed functionCallId should be ignored');
+    assert.strictEqual(executionCount, 1, 'Execution count must remain 1');
+  }
+  console.log('✓ Passed [22/25]\n');
+
+  // Test 23: createCustomActionMessage envelope and identifier tamper defense
+  console.log('[23/25] Testing createCustomActionMessage envelope and identifier tamper defense...');
+  {
+    const engine = new A2UIEngine({ legacyOutbound: false });
+    const msg = engine.createCustomActionMessage('surf_real', 'comp_real', {
+      name: 'tap_action',
+      surfaceId: 'surf_fake', // attempt to tamper
+      sourceComponentId: 'comp_fake',
+      context: { val: 42 },
+    });
+
+    assert.strictEqual(msg.version, '1.0');
+    assert.ok(msg.renderer_to_agent.action);
+    assert.strictEqual(msg.renderer_to_agent.action.surfaceId, 'surf_real', 'surfaceId must not be overridden');
+    assert.strictEqual(msg.renderer_to_agent.action.sourceComponentId, 'comp_real', 'sourceComponentId must not be overridden');
+    assert.strictEqual(msg.renderer_to_agent.action.name, 'tap_action');
+    assert.deepStrictEqual(msg.renderer_to_agent.action.context, { val: 42 });
+  }
+  console.log('✓ Passed [23/25]\n');
+
+  // Test 24: destroy() cleanup and subsequent call safety
+  console.log('[24/25] Testing destroy() cleanup and subsequent call safety...');
+  {
+    const engine = new A2UIEngine();
+    let outboundCalled = false;
+    engine.setOutboundListener(() => {
+      outboundCalled = true;
+    });
+
+    engine.destroy();
+    assert.strictEqual(engine.outboundListener, null, 'outboundListener must be cleared on destroy');
+    assert.strictEqual(engine.process({ createSurface: { surfaceId: 's1' } }), null);
+    assert.strictEqual(engine.processMessage({ createSurface: { surfaceId: 's1' } }), null);
+    assert.strictEqual(engine.executeRendererFunction({ functionCallId: 'f1' }), null);
+
+    await assert.rejects(
+      engine.callAgentFunction('s1', { '@call': 'fn' }),
+      (err) => err.code === ErrorCodes.DISPOSED
+    );
+  }
+  console.log('✓ Passed [24/25]\n');
+
+  // Test 25: ErrorCodes parity with TypeScript definition
+  console.log('[25/25] Testing ErrorCodes parity with TypeScript definition...');
+  {
+    const expectedCodes = [
+      'VALIDATION_FAILED',
+      'UNKNOWN_COMPONENT',
+      'EXECUTION_ERROR',
+      'UNALLOWED_PARENT',
+      'UNALLOWED_CHILD',
+      'UNKNOWN_FUNCTION',
+      'INVALID_FUNCTION_CALL',
+      'UNKNOWN_ERROR',
+      'NO_TRANSPORT',
+      'SURFACE_DELETED',
+      'TIMEOUT',
+      'CANCELLED',
+      'DISPOSED',
+    ];
+    for (const code of expectedCodes) {
+      assert.strictEqual(ErrorCodes[code], code, `ErrorCodes.${code} must be defined`);
+    }
+  }
+  console.log('✓ Passed [25/25]\n');
 
   console.log('🎉 All A2UI 1.0 and RPC tests passed successfully!');
 }
